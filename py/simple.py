@@ -4,8 +4,6 @@ import random
 
 import numpy as np
 
-import mnist
-
 np.seterr(over="ignore")
 
 class Network(object):
@@ -79,6 +77,9 @@ def sigmoid_derivative(z):
     return s * (1.0 - s)
 
 if __name__ == "__main__":
+    import scipy.misc as spm
+    import mnist
+
     logging.basicConfig(format="%(asctime)s[%(levelname)s] %(message)s", datefmt='%Y/%m/%d-%H:%M:%S',
             level=logging.INFO)
     parser = argparse.ArgumentParser(description='Simple 1 layer network.')
@@ -88,9 +89,52 @@ if __name__ == "__main__":
     parser.add_argument("--mini_batch_size", type=int, default=10, help="Mini batch size")
     parser.add_argument("--learning_rate", type=float, default=3.0, help="Learning rate")
     parser.add_argument("--training_samples", type=int, default=30000, help="Number of training samples")
+    parser.add_argument("--down_sample_rate", type=int, default=1, help="Down sample the image.")
     args = parser.parse_args()
-    net = Network([28 * 28, args.neurons, 10])
+    size = mnist.IMAGE_SIZE / args.down_sample_rate
+    net = Network([size * size, args.neurons, 10])
     training_data = mnist.load("train", expand=True)
     testing_data = test_data=mnist.load("t10k")
+    if args.down_sample_rate > 1:
+        def down_sample(sample):
+            return (spm.imresize(sample[0].reshape([mnist.IMAGE_SIZE, mnist.IMAGE_SIZE]),
+                                 [size, size], mode='F').reshape([size * size, 1]),
+                    sample[1])
+        training_data = map(down_sample, training_data)
+        testing_data = map(down_sample, testing_data)
     net.stochastic_gradient_descent(training_data, args.training_samples, args.epochs,
             args.mini_batch_size, args.learning_rate, test_data=testing_data)
+
+'''
+MKL_NUM_THREADS=1 python simple.py --training_samples=10000 --down_sample_rate=2
+Epoch 0: 0.86(8604/10000)
+Epoch 1: 0.90(9048/10000)
+Epoch 2: 0.91(9109/10000)
+Epoch 3: 0.91(9084/10000)
+Epoch 4: 0.92(9188/10000)
+Epoch 5: 0.93(9256/10000)
+Epoch 6: 0.93(9299/10000)
+Epoch 7: 0.93(9292/10000)
+Epoch 8: 0.93(9328/10000)
+Epoch 9: 0.93(9323/10000)
+Epoch 10: 0.94(9353/10000)
+Epoch 11: 0.94(9389/10000)
+Epoch 12: 0.93(9325/10000)
+Epoch 13: 0.94(9377/10000)
+Epoch 14: 0.94(9374/10000)
+Epoch 15: 0.94(9434/10000)
+Epoch 16: 0.94(9385/10000)
+Epoch 17: 0.95(9474/10000)
+Epoch 18: 0.94(9413/10000)
+Epoch 19: 0.94(9449/10000)
+Epoch 20: 0.95(9458/10000)
+Epoch 21: 0.94(9446/10000)
+Epoch 22: 0.95(9479/10000)
+Epoch 23: 0.95(9472/10000)
+Epoch 24: 0.95(9508/10000)
+Epoch 25: 0.95(9509/10000)
+Epoch 26: 0.95(9501/10000)
+Epoch 27: 0.95(9493/10000)
+Epoch 28: 0.95(9520/10000)
+Epoch 29: 0.95(9497/10000)
+'''

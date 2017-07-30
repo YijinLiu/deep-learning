@@ -6,6 +6,8 @@ import urllib
 
 import numpy as np
 
+IMAGE_SIZE = 28
+
 IDX_DATA_TYPE_U8 = 0x8
 IDX_DATA_TYPE_S8 = 0x9
 IDX_DATA_TYPE_I16 = 0xb
@@ -84,4 +86,3 @@ def read_idx_file(file_name, fh):
     for i in xrange(n):
         dimensions[i] = struct.unpack(">i", fh.read(4))[0]
     return (data_type, dimensions)
-
