@@ -177,7 +177,7 @@ training_data = None
 def test_network_simple_n30_e10_t10000(benchmark):
     global training_data
     if not training_data:
-        training_data = mnist.load("train", expand=True)
+        training_data = mnist.load("train")
     net = simple.Network([28 * 28, 30, 10])
     @benchmark
     def train():
@@ -196,7 +196,7 @@ def test_network_simple_n30_e10_t10000(benchmark):
 def test_network_simple_n30_e10_t20000(benchmark):
     global training_data
     if not training_data:
-        training_data = mnist.load("train", expand=True)
+        training_data = mnist.load("train")
     net = simple.Network([28 * 28, 30, 10])
     @benchmark
     def train():
@@ -215,7 +215,7 @@ def test_network_simple_n30_e10_t20000(benchmark):
 def test_network_simple_n100_e10_t10000(benchmark):
     global training_data
     if not training_data:
-        training_data = mnist.load("train", expand=True)
+        training_data = mnist.load("train")
     net = simple.Network([28 * 28, 100, 10])
     @benchmark
     def train():
@@ -234,7 +234,7 @@ def test_network_simple_n100_e10_t10000(benchmark):
 def test_network_simple_n100_e10_t20000(benchmark):
     global training_data
     if not training_data:
-        training_data = mnist.load("train", expand=True)
+        training_data = mnist.load("train")
     net = simple.Network([28 * 28, 100, 10])
     @benchmark
     def train():

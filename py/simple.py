@@ -1,4 +1,3 @@
-import argparse
 import logging
 import random
 
@@ -55,14 +54,14 @@ class Network(object):
             zs.append(z)
             activation = sigmoid(z)
             activations.append(activation)
-        delta = (activation - y) * sigmoid_derivative(zs[-1])
-        delta_b[-1] = delta
-        delta_w[-1] = np.dot(delta, activations[-2].transpose())
-        for l in xrange(2, self.num_layers):
+        delta = activation
+        delta[y] -= 1.0
+        for l in xrange(1, self.num_layers):
             z = zs[-l]
-            delta = np.dot(self.weights[-l+1].transpose(), delta) * sigmoid_derivative(z)
+            delta = delta * sigmoid_derivative(zs[-l])
             delta_b[-l] = delta
             delta_w[-l] = np.dot(delta, activations[-l-1].transpose())
+            delta = np.dot(self.weights[-l].transpose(), delta)
         return (delta_b, delta_w)
 
     def evaluate(self, test_data):
@@ -77,31 +76,36 @@ def sigmoid_derivative(z):
     return s * (1.0 - s)
 
 if __name__ == "__main__":
-    import scipy.misc as spm
+    import argparse
+
     import mnist
+
+    import img_util
 
     logging.basicConfig(format="%(asctime)s[%(levelname)s] %(message)s", datefmt='%Y/%m/%d-%H:%M:%S',
             level=logging.INFO)
     parser = argparse.ArgumentParser(description='Simple 1 layer network.')
     parser.add_argument("--neurons", type=int, default=30,
-            help="Number of neurons in the hidden layer.")
-    parser.add_argument("--epochs", type=int, default=30, help="Number of training epochs")
-    parser.add_argument("--mini_batch_size", type=int, default=10, help="Mini batch size")
-    parser.add_argument("--learning_rate", type=float, default=3.0, help="Learning rate")
-    parser.add_argument("--training_samples", type=int, default=30000, help="Number of training samples")
-    parser.add_argument("--down_sample_rate", type=int, default=1, help="Down sample the image.")
+            help="number of neurons in the hidden layer")
+    parser.add_argument("--epochs", type=int, default=30, help="number of training epochs")
+    parser.add_argument("--mini_batch_size", type=int, default=10, help="mini batch size")
+    parser.add_argument("--learning_rate", type=float, default=3.0, help="learning rate")
+    parser.add_argument("--training_samples", type=int, default=30000,
+            help="number of training samples to use per epoch")
+    parser.add_argument("--down_sample_rate", type=int, default=1, help="down sample the images")
     args = parser.parse_args()
     size = mnist.IMAGE_SIZE / args.down_sample_rate
     net = Network([size * size, args.neurons, 10])
-    training_data = mnist.load("train", expand=True)
+    training_data = mnist.load("train")
     testing_data = test_data=mnist.load("t10k")
     if args.down_sample_rate > 1:
         def down_sample(sample):
-            return (spm.imresize(sample[0].reshape([mnist.IMAGE_SIZE, mnist.IMAGE_SIZE]),
-                                 [size, size], mode='F').reshape([size * size, 1]),
+            return (img_util.down_sample(sample[0], mnist.IMAGE_SIZE, mnist.IMAGE_SIZE,
+                                         args.down_sample_rate, args.down_sample_rate),
                     sample[1])
         training_data = map(down_sample, training_data)
         testing_data = map(down_sample, testing_data)
+
     net.stochastic_gradient_descent(training_data, args.training_samples, args.epochs,
             args.mini_batch_size, args.learning_rate, test_data=testing_data)
 

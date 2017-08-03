@@ -2,7 +2,6 @@ import gzip
 import logging
 import os
 import struct
-import urllib
 
 import numpy as np
 
@@ -15,34 +14,12 @@ IDX_DATA_TYPE_I32 = 0xc
 IDX_DATA_TYPE_F32 = 0xd
 IDX_DATA_TYPE_F64 = 0xe
 
-DATA_DIR = "mnist_data"
+def load(name, folder=None):
+    if not folder:
+        folder = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "mnist_data")
 
-def load(name, expand=False):
-    if not os.path.exists(DATA_DIR):
-        os.makedirs(DATA_DIR)
-
-    images_file_name = name + "-images-idx3-ubyte.gz"
-    images_file_path = os.path.join(DATA_DIR, images_file_name)
-    if not os.path.isfile(images_file_path):
-        url = "http://yann.lecun.com/exdb/mnist/" + images_file_name
-        logging.info("Downloading %s ..." % url)
-        urllib.urlretrieve(url, images_file_path)
-    images = load_images(images_file_path)
-
-    labels_file_name = name + "-labels-idx1-ubyte.gz"
-    labels_file_path = os.path.join(DATA_DIR, labels_file_name)
-    if not os.path.isfile(labels_file_path):
-        url = "http://yann.lecun.com/exdb/mnist/" + labels_file_name
-        logging.info("Downloading %s ..." % url)
-        urllib.urlretrieve(url, labels_file_path)
-    labels = load_labels(labels_file_path)
-    if expand:
-        expanded_labels = [None] * len(labels)
-        for i in xrange(len(labels)):
-            v = np.zeros((10, 1), dtype=np.float32)
-            v[labels[i]] = 1.0
-            expanded_labels[i] = v
-        labels = expanded_labels
+    images = load_images(os.path.join(folder, name + "-images-idx3-ubyte.gz"))
+    labels = load_labels(os.path.join(folder, name + "-labels-idx1-ubyte.gz"))
     return zip(images, labels)
 
 def load_images(file_name):
