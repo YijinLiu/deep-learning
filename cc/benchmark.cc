@@ -2,6 +2,9 @@
 
 #include <armadillo>
 
+#include "mnist.hpp"
+#include "network.hpp"
+
 namespace {
 
 void BM_MatrixMul(benchmark::State& state) {
@@ -21,10 +24,30 @@ void BM_MatrixRank(benchmark::State& state) {
     }
 }
 
+void BM_Network(benchmark::State& state) {
+    const int neurons = state.range(0);
+    const int epochs = state.range(1);
+    const int samples = state.range(2);
+    const auto training_data = LoadMNISTData(nullptr, "train");
+    const size_t image_size = training_data[0].first.n_elem;
+    while (state.KeepRunning()) {
+        std::vector<size_t> layer_sizes;
+        layer_sizes.push_back(image_size);
+        layer_sizes.push_back(neurons);
+        layer_sizes.push_back(10);
+        Network network(layer_sizes);
+        network.StochasticGradientDescent(training_data, samples, epochs, 10, 3.0, nullptr);
+    }
+}
+
 }  // namespace
 
 BENCHMARK(BM_MatrixMul)->RangeMultiplier(2)->Range(128, 2048);
 BENCHMARK(BM_MatrixRank)->RangeMultiplier(2)->Range(128, 2048);
+BENCHMARK(BM_Network)->Args({30, 10, 10000})
+                     ->Args({100, 10, 10000})
+                     ->Args({30, 10, 20000})
+                     ->Args({100, 10, 20000});
 
 int main(int argc, char** argv) {
     benchmark::Initialize(&argc, argv);

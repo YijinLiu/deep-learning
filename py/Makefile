@@ -3,7 +3,7 @@
 PROJECT_ROOT=$(shell readlink -f $(dir $(lastword $(MAKEFILE_LIST)))/..)
 
 train_mnist: mnist_data
-	python simple.py --down_sample_rate=2
+	MKL_NUM_THREADS=1 python simple.py --down_sample_rate=2
 
 benchmark: mnist_data
 	MKL_NUM_THREADS=1 py.test --benchmark-sort=mean benchmark.py
