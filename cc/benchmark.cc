@@ -26,8 +26,6 @@ void BM_MatrixRank(benchmark::State& state) {
 
 void BM_Network(benchmark::State& state) {
     const int neurons = state.range(0);
-    const int epochs = state.range(1);
-    const int samples = state.range(2);
     const auto training_data = LoadMNISTData(nullptr, "train");
     const size_t image_size = training_data[0].first.n_elem;
     while (state.KeepRunning()) {
@@ -36,18 +34,18 @@ void BM_Network(benchmark::State& state) {
         layer_sizes.push_back(neurons);
         layer_sizes.push_back(10);
         Network network(layer_sizes);
-        network.StochasticGradientDescent(training_data, samples, epochs, 10, 3.0, nullptr);
+        network.StochasticGradientDescent(training_data, 1000, 10, 10, 3.0, nullptr);
     }
 }
 
 }  // namespace
 
-BENCHMARK(BM_MatrixMul)->RangeMultiplier(2)->Range(128, 2048);
-BENCHMARK(BM_MatrixRank)->RangeMultiplier(2)->Range(128, 2048);
-BENCHMARK(BM_Network)->Args({30, 10, 10000})
-                     ->Args({100, 10, 10000})
-                     ->Args({30, 10, 20000})
-                     ->Args({100, 10, 20000});
+BENCHMARK(BM_MatrixMul)->Unit(benchmark::kMicrosecond)->Repetitions(10)->ReportAggregatesOnly()
+    ->RangeMultiplier(2)->Range(128, 2048);
+BENCHMARK(BM_MatrixRank)->Unit(benchmark::kMicrosecond)->Repetitions(10)->ReportAggregatesOnly()
+    ->RangeMultiplier(2)->Range(128, 2048);
+BENCHMARK(BM_Network)->Unit(benchmark::kMillisecond)->Repetitions(10)->ReportAggregatesOnly()
+    ->RangeMultiplier(2)->Range(128, 2048);
 
 int main(int argc, char** argv) {
     benchmark::Initialize(&argc, argv);
@@ -56,40 +54,58 @@ int main(int argc, char** argv) {
 }
 
 // 1. Linux i5-5575R 4.8.0-58-generic Armadillo-7.950.1 with ATLAS-3.10.3
-// BM_MatrixMul/128       297072 ns     297068 ns       2367
-// BM_MatrixMul/256       885741 ns     885720 ns        779
-// BM_MatrixMul/512      6040530 ns    6039036 ns        113
-// BM_MatrixMul/1024    48032997 ns   48027634 ns         14
-// BM_MatrixMul/2048   356259422 ns  356245540 ns          2
+// BM_MatrixMul/128                 296 us
+// BM_MatrixMul/256                 882 us
+// BM_MatrixMul/512                6028 us
+// BM_MatrixMul/1024              48629 us
+// BM_MatrixMul/2048             359077 us
 //
-// BM_MatrixRank/128     1248244 ns    1242651 ns        547
-// BM_MatrixRank/256     8275527 ns    8275407 ns         83
-// BM_MatrixRank/512    55673140 ns   55671379 ns         12
-// BM_MatrixRank/1024  422724163 ns  422714866 ns          2
-// BM_MatrixRank/2048 3456366837 ns 3453005685 ns          1
+// BM_MatrixRank/128               1261 us
+// BM_MatrixRank/256               8090 us
+// BM_MatrixRank/512              55663 us
+// BM_MatrixRank/1024            415310 us
+// BM_MatrixRank/2048           3452130 us
+//
+// BM_Network/128                   439 ms
+// BM_Network/256                   790 ms
+// BM_Network/512                  2180 ms
+// BM_Network/1024                12807 ms
+// BM_Network/2048                60815 ms
 //
 // 2. Linux i5-5575R 4.8.0-58-generic Armadillo-7.950.1 with OpenBLAS-0.2.19
-// BM_MatrixMul/128        70116 ns      70115 ns       9573
-// BM_MatrixMul/256       458532 ns     458526 ns       1520
-// BM_MatrixMul/512      3522217 ns    3521357 ns        199
-// BM_MatrixMul/1024    26995594 ns   26995217 ns         26
-// BM_MatrixMul/2048   214196776 ns  214195269 ns          3
+// BM_MatrixMul/128                  70 us
+// BM_MatrixMul/256                 461 us
+// BM_MatrixMul/512                3532 us
+// BM_MatrixMul/1024              27478 us
+// BM_MatrixMul/2048             215039 us
 //
-// BM_MatrixRank/128     1281774 ns    1276120 ns        545
-// BM_MatrixRank/256     5341550 ns    5341473 ns        125
-// BM_MatrixRank/512    29036400 ns   29036090 ns         24
-// BM_MatrixRank/1024  178252975 ns  178251867 ns          4
-// BM_MatrixRank/2048 1654905208 ns 1651834367 ns          1
+// BM_MatrixRank/128               1275 us
+// BM_MatrixRank/256               5496 us
+// BM_MatrixRank/512              29618 us
+// BM_MatrixRank/1024            174341 us
+// BM_MatrixRank/2048           1675364 us
+//
+// BM_Network/128                   506 ms
+// BM_Network/256                   951 ms
+// BM_Network/512                  2571 ms
+// BM_Network/1024                 6881 ms
+// BM_Network/2048                24007 ms
 //
 // 3. Linux i5-5575R 4.8.0-58-generic Armadillo-7.950.1 with MKL-2017.3.196
-// BM_MatrixMul/128        14348 ns      14234 ns      50117
-// BM_MatrixMul/256       106776 ns     106726 ns       6314
-// BM_MatrixMul/512       874009 ns     867167 ns        817
-// BM_MatrixMul/1024     6764864 ns    6762785 ns        104
-// BM_MatrixMul/2048    52511307 ns   52171988 ns         12
+// BM_MatrixMul/128                  51 us
+// BM_MatrixMul/256                 383 us
+// BM_MatrixMul/512                3049 us
+// BM_MatrixMul/1024              24705 us
+// BM_MatrixMul/2048             197104 us
 //
-// BM_MatrixRank/128      826153 ns     824132 ns        819
-// BM_MatrixRank/256     3630703 ns    3615387 ns        192
-// BM_MatrixRank/512    14279087 ns   14278752 ns         49
-// BM_MatrixRank/1024   73896350 ns   73894769 ns          9
-// BM_MatrixRank/2048  739607749 ns  739026617 ns          1
+// BM_MatrixRank/128                772 us
+// BM_MatrixRank/256               3547 us
+// BM_MatrixRank/512              22423 us
+// BM_MatrixRank/1024            153508 us
+// BM_MatrixRank/2048           1592578 us
+//
+// BM_Network/128                   446 ms
+// BM_Network/256                   850 ms
+// BM_Network/512                  2142 ms
+// BM_Network/1024                 5839 ms
+// BM_Network/2048                19566 ms

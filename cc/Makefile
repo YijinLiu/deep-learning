@@ -9,8 +9,8 @@ benchmark: bin/benchmark mnist_data
 	bin/benchmark
 
 BLAS?=mkl
-BLAS_LDFLAGS/atlas:=-L/usr/local/ATLAS/lib -llapack -lcblas
-BLAS_LDFLAGS/openblas:=-L/usr/local/OpenBLAS/lib -lopenblas
+BLAS_LDFLAGS/atlas:=-L/usr/local/ATLAS/lib -llapack -lcblas -lf77blas -latlas -lgfortran -lquadmath
+BLAS_LDFLAGS/openblas:=-L/usr/local/OpenBLAS/lib -lopenblas -lgfortran -lquadmath
 BLAS_LDFLAGS/mkl:=-L/usr/local/intel/mkl/lib/intel64 -Wl,--start-group -lmkl_intel_lp64 -lmkl_sequential -lmkl_core -Wl,--end-group
 BLAS_LDFLAGS=$(BLAS_LDFLAGS/$(BLAS))
 
