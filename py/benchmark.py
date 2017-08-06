@@ -174,14 +174,14 @@ training_data = None
     disable_gc=True,
     warmup=True
 )
-def test_network_simple_n30_e10_t10000(benchmark):
+def test_network_n128(benchmark):
     global training_data
     if not training_data:
         training_data = mnist.load("train")
-    net = simple.Network([28 * 28, 30, 10])
+    net = simple.Network([28 * 28, 128, 10])
     @benchmark
     def train():
-        net.stochastic_gradient_descent(training_data, 10000, epochs=10, mini_batch_size=10,
+        net.stochastic_gradient_descent(training_data, 1000, epochs=10, mini_batch_size=10,
                 learning_rate=3.0)
 
 @pytest.mark.benchmark(
@@ -193,14 +193,14 @@ def test_network_simple_n30_e10_t10000(benchmark):
     disable_gc=True,
     warmup=True
 )
-def test_network_simple_n30_e10_t20000(benchmark):
+def test_network_n256(benchmark):
     global training_data
     if not training_data:
         training_data = mnist.load("train")
-    net = simple.Network([28 * 28, 30, 10])
+    net = simple.Network([28 * 28, 256, 10])
     @benchmark
     def train():
-        net.stochastic_gradient_descent(training_data, 20000, epochs=10, mini_batch_size=10,
+        net.stochastic_gradient_descent(training_data, 1000, epochs=10, mini_batch_size=10,
                 learning_rate=3.0)
 
 @pytest.mark.benchmark(
@@ -212,14 +212,14 @@ def test_network_simple_n30_e10_t20000(benchmark):
     disable_gc=True,
     warmup=True
 )
-def test_network_simple_n100_e10_t10000(benchmark):
+def test_network_n512(benchmark):
     global training_data
     if not training_data:
         training_data = mnist.load("train")
-    net = simple.Network([28 * 28, 100, 10])
+    net = simple.Network([28 * 28, 512, 10])
     @benchmark
     def train():
-        net.stochastic_gradient_descent(training_data, 10000, epochs=10, mini_batch_size=10,
+        net.stochastic_gradient_descent(training_data, 1000, epochs=10, mini_batch_size=10,
                 learning_rate=3.0)
 
 @pytest.mark.benchmark(
@@ -231,16 +231,34 @@ def test_network_simple_n100_e10_t10000(benchmark):
     disable_gc=True,
     warmup=True
 )
-def test_network_simple_n100_e10_t20000(benchmark):
+def test_network_n1024(benchmark):
     global training_data
     if not training_data:
         training_data = mnist.load("train")
-    net = simple.Network([28 * 28, 100, 10])
+    net = simple.Network([28 * 28, 1024, 10])
     @benchmark
     def train():
-        net.stochastic_gradient_descent(training_data, 20000, epochs=10, mini_batch_size=10,
+        net.stochastic_gradient_descent(training_data, 1000, epochs=10, mini_batch_size=10,
                 learning_rate=3.0)
 
+@pytest.mark.benchmark(
+    group="network_simple",
+    min_time=1.0,
+    max_time=5.0,
+    min_rounds=10,
+    timer=time.time,
+    disable_gc=True,
+    warmup=True
+)
+def test_network_n2048(benchmark):
+    global training_data
+    if not training_data:
+        training_data = mnist.load("train")
+    net = simple.Network([28 * 28, 2048, 10])
+    @benchmark
+    def train():
+        net.stochastic_gradient_descent(training_data, 1000, epochs=10, mini_batch_size=10,
+                learning_rate=3.0)
 
 '''
 1. Linux i5-5575R 4.8.0-58-generic NumPy-1.13.1 with ATLAS-3.10.3
@@ -262,10 +280,11 @@ test_matrix_rank_2048   4,354.50 (>1000.0) 4,446.46 (>1000.0) 4,395.12 (>1000.0)
 
 Name (time in s)                Min               Max                Mean            StdDev             Median
 ---------------------------------------------------------------------------------------------------------------------
-simple_n30_e10_t10000       7.86 (1.0)         7.96 (1.0)         7.89 (1.0)       0.03 (1.43)        7.87 (1.0)
-simple_n30_e10_t20000      15.39 (1.96)       15.86 (1.99)       15.64 (1.98)      0.16 (6.14)       15.67 (1.99)
-simple_n100_e10_t10000     15.86 (2.02)       15.93 (2.00)       15.90 (2.01)      0.02 (1.0)        15.90 (2.02)
-simple_n100_e10_t20000     31.05 (3.95)       31.38 (3.94)       31.21 (3.95)      0.13 (4.78)       31.27 (3.97)
+test_network_n128           2.25 (1.0)         2.27 (1.0)        2.25 (1.0)      0.0079 (1.0)        2.25 (1.0)
+test_network_n256           4.23 (1.88)        4.28 (1.89)       4.24 (1.88)     0.0151 (1.90)       4.24 (1.88)
+test_network_n512           9.31 (4.14)        9.50 (4.19)       9.43 (4.18)     0.0596 (7.54)       9.44 (4.19)
+test_network_n1024         40.37 (17.94)      41.91 (18.46)     41.32 (18.30)    0.5238 (66.27)     41.53 (18.40)
+test_network_n2048        106.37 (47.27)     113.47 (49.97)    110.68 (49.01)    2.3463 (296.85)   110.77 (49.09)
 
 
 2. Linux i5-5575R 4.8.0-58-generic NumPy-1.13.1 with OpenBLAS-0.2.19
@@ -287,10 +306,11 @@ test_matrix_rank_2048   3,411.22 (>1000.0) 3,547.44 (>1000.0) 3,463.55 (>1000.0)
 
 Name (time in s)                Min               Max                Mean            StdDev             Median
 ---------------------------------------------------------------------------------------------------------------------
-simple_n30_e10_t10000       7.55 (1.0)         7.70 (1.0)         7.62 (1.0)       0.04 (1.0)         7.62 (1.0)
-simple_n30_e10_t20000      15.10 (2.00)       15.31 (1.99)       15.20 (1.99)      0.05 (1.10)       15.20 (1.99)
-simple_n100_e10_t10000     15.49 (2.05)       16.02 (2.08)       15.67 (2.06)      0.16 (3.44)       15.65 (2.05)
-simple_n100_e10_t20000     30.43 (4.03)       30.86 (4.00)       30.57 (4.01)      0.17 (3.72)       30.49 (4.00)
+test_network_n128           2.23 (1.0)         2.26 (1.0)         2.23 (1.0)      0.0088 (1.47)       2.23 (1.0)
+test_network_n256           4.27 (1.91)        4.28 (1.90)        4.27 (1.91)     0.0060 (1.0)        4.27 (1.91)
+test_network_n512           9.62 (4.31)        9.86 (4.36)        9.74 (4.35)     0.0840 (14.06)      9.78 (4.37)
+test_network_n1024         26.50 (11.88)      28.44 (12.58)      27.54 (12.30)    0.6463 (108.17)    27.66 (12.37)
+test_network_n2048         74.53 (33.39)      77.07 (34.10)      76.06 (33.96)    0.7468 (124.99)    75.99 (33.98)
 
 
 3. Linux i5-5575R 4.8.0-58-generic NumPy-1.13.1 with MKL-2017.3.196
@@ -312,8 +332,9 @@ test_matrix_rank_2048   3,116.04 (>1000.0) 3,148.08 (>1000.0) 3,131.82 (>1000.0)
 
 Name (time in s)                Min               Max                Mean            StdDev             Median
 ---------------------------------------------------------------------------------------------------------------------
-simple_n30_e10_t10000       6.58 (1.0)         6.65 (1.0)         6.60 (1.0)        0.02 (1.0)         6.60 (1.0)
-simple_n100_e10_t10000     12.41 (1.89)       12.50 (1.88)       12.46 (1.89)       0.02 (1.14)       12.45 (1.89)
-simple_n30_e10_t20000      13.01 (1.98)       13.12 (1.97)       13.08 (1.98)       0.03 (1.27)       13.08 (1.98)
-simple_n100_e10_t20000     24.64 (3.74)       24.90 (3.74)       24.73 (3.74)       0.08 (3.23)       24.72 (3.74)
+test_network_n128           1.81 (1.0)         1.83 (1.0)         1.82 (1.0)      0.0057 (1.0)         1.82 (1.0)
+test_network_n256           3.40 (1.87)        3.41 (1.86)        3.40 (1.87)     0.0060 (1.05)        3.41 (1.87)
+test_network_n512           7.97 (4.39)        8.07 (4.39)        8.02 (4.40)     0.0365 (6.35)        8.02 (4.40)
+test_network_n1024         20.08 (11.04)      21.47 (11.68)      20.68 (11.33)    0.4192 (72.95)      20.61 (11.31)
+test_network_n2048         58.17 (31.98)      60.23 (32.76)      59.32 (32.51)    0.6438 (112.05)     59.42 (32.59)
 '''
