@@ -1,8 +1,8 @@
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 
+#include "feedforward_network.hpp"
 #include "mnist.hpp"
-#include "network.hpp"
 
 DEFINE_int32(neurons, 30, "");
 DEFINE_int32(epochs, 30, "");
@@ -17,12 +17,12 @@ int main(int argc, char* argv[]) {
     const auto training_data = LoadMNISTData(nullptr, "train");
     const auto testing_data = LoadMNISTData(nullptr, "t10k");
     VLOG(1) << "Training using MNIST data ...";
-    const size_t image_size = training_data[0].first.n_elem;
+    const size_t image_size = training_data[0].first.size();
     std::vector<size_t> layer_sizes;
     layer_sizes.push_back(image_size);
     layer_sizes.push_back(FLAGS_neurons);
     layer_sizes.push_back(10);
-    Network network(layer_sizes);
+    FeedForwardNetwork network(layer_sizes);
     network.StochasticGradientDescent(training_data, FLAGS_num_samples_per_epoch, FLAGS_epochs,
                                       FLAGS_mini_batch_size, FLAGS_learning_rate, &testing_data);
 }

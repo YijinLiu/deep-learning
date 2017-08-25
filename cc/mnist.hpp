@@ -4,9 +4,8 @@
 #include <utility>
 #include <vector>
 
-#include <armadillo>
+#include <Eigen/Dense>
 
-std::vector<std::pair<arma::Col<float>, int>> LoadMNISTData(
-    const char* dir, const char* name);
+std::vector<std::pair<Eigen::VectorXf, int>> LoadMNISTData(const char* dir, const char* name);
 
 #endif  // DEEP_LEARNING_MNIST_HPP_
