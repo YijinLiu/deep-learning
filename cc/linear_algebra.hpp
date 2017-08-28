@@ -1,6 +1,8 @@
 #ifndef DEEP_LEARNING_LINEAR_ALGEBRA_HPP_
 #define DEEP_LEARNING_LINEAR_ALGEBRA_HPP_
 
+#include <algorithm>
+
 #ifdef USE_EIGEN
 
 #include <Eigen/Dense>
@@ -61,6 +63,35 @@ inline Eigen::VectorXf SigmoidDerivative(const Eigen::VectorXf& z) {
     return s.cwiseProduct(Eigen::VectorXf::Constant(z.size(), 1.f) - s);
 }
 
+inline Eigen::VectorXf ReLU(const Eigen::VectorXf& z) {
+    return z.cwiseMax(0.f);
+}
+
+inline Eigen::VectorXf ReLUDerivative(const Eigen::VectorXf& z) {
+    const Eigen::VectorXf d = Sigmoid(z);
+    for (int i = 0; i < z.size(); i++) {
+        if (z(i) < 0) {
+            d(i) = 0.f;
+        } else {
+            d(i) = 1.f;
+        }
+    }
+    return d;
+}
+
+inline Eigen::VectorXf SoftMax(const Eigen::VectorXf& z) {
+    Eigen::VectorXf a(z.size());
+    const float max = z.maxCoeff();
+    float sum = 0.f;
+    for (int i = 0; i < z.size(); i++) {
+        const float e = expf(z(i) - max);
+        a[i] = e;
+        sum += e;
+    }
+    a /= sum;
+    return a;
+}
+
 #elif defined(USE_ARMADILLO)
 
 #include <armadillo>
@@ -112,6 +143,40 @@ inline arma::Col<float> Sigmoid(const arma::Col<float>& z) {
 inline arma::Col<float> SigmoidDerivative(const arma::Col<float>& z) {
     const arma::Col<float> s = Sigmoid(z);
     return s % (arma::ones<arma::Col<float>>(z.n_elem) - s);
+}
+
+inline arma::Col<float> LeRU(const arma::Col<float>& z) {
+    arma::Col<float> a(z.n_elem);
+    for (int i = 0; i < z.n_elem; i++) a[i] = std::max(z[i], 0.f);
+    return a;
+}
+
+inline arma::Col<float> LeRUDerivative(const arma::Col<float>& z) {
+    arma::Col<float> d(z.n_elem);
+    for (int i = 0; i < z.n_elem; i++) {
+        if (z[i] < 0.f) {
+            d[i] = 0.f;
+        } else {
+            d[i] = 1.f;
+        }
+    }
+    return d;
+}
+
+inline arma::Col<float> SoftMax(const arma::Col<float>& z) {
+    arma::Col<float> a(z.n_elem);
+    const float max = z.max();
+    float sum = 0.f;
+    for (int i = 0; i < z.n_elem; i++) {
+        const float e = expf(z[i] - max);
+        a[i] = e;
+        sum += e;
+    }
+    a /= sum;
+    return a;
+}
+
+inline arma::Col<float> SoftMaxDerivative(const arma::Col<float>& z) {
 }
 
 #else
