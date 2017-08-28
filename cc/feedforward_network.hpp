@@ -11,25 +11,22 @@
 class FeedForwardNetwork {
   public:
     enum class ActivationFunc {
-        kActivationFuncInput;
-        kActivationFuncReLU;
-        kActivationFuncSigmoid;
-        kActivationFuncSoftMax;
-    };
-
-    enum class CostFunc {
-        kCostFuncCrossEntropy;
-        kCostFuncMeanSquareError;
+        Identity,
+        ReLU,
+        Sigmoid,
+        SoftMax
     };
 
     struct Layer {
+        Layer(int num_neurons, ActivationFunc activation) : num_neurons(num_neurons),
+                                                            activation(activation) {}
         int num_neurons;
         ActivationFunc activation;
     };
 
     typedef std::pair<Vector, int> Case;
 
-    FeedForwardNetwork(const std::vector<Layer>& layers, CostFunc cost);
+    FeedForwardNetwork(const std::vector<Layer>& layers, float weight_decay);
 
     void StochasticGradientDescent(
         const std::vector<Case>& training_data, size_t num_samples_per_epoch, size_t epochs,
@@ -52,7 +49,7 @@ class FeedForwardNetwork {
                        std::vector<Vector>& biases_delta, std::vector<Matrix>& weights_delta);
 
     const std::vector<Layer> layers_;
-    const CostFunc cost_;
+    const float weight_decay_;
     std::vector<Vector> biases_;
     std::vector<Matrix> weights_;
 };

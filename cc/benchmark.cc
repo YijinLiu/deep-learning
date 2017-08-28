@@ -10,9 +10,9 @@ namespace {
 void BM_MatrixMul(benchmark::State& state) {
     const int size = state.range(0);
     Matrix A;
-    RandomizeMatrix(A, size, size);
+    Randomize(A, size, size);
     Matrix B;
-    RandomizeMatrix(B, size, size);
+    Randomize(B, size, size);
     while (state.KeepRunning()) {
         Matrix C = A * B;
     }
@@ -21,7 +21,7 @@ void BM_MatrixMul(benchmark::State& state) {
 void BM_MatrixRank(benchmark::State& state) {
     const int size = state.range(0);
     Matrix A;
-    RandomizeMatrix(A, size, size);
+    Randomize(A, size, size);
     while (state.KeepRunning()) {
         int rank = Rank(A);
     }
@@ -32,12 +32,12 @@ void BM_FeedForwardNetwork(benchmark::State& state) {
     const auto training_data = LoadMNISTData(nullptr, "train");
     const size_t image_size = training_data[0].first.size();
     while (state.KeepRunning()) {
-        std::vector<size_t> layer_sizes;
-        layer_sizes.push_back(image_size);
-        layer_sizes.push_back(neurons);
-        layer_sizes.push_back(10);
-        FeedForwardNetwork network(layer_sizes);
-        network.StochasticGradientDescent(training_data, 1000, 10, 10, 3.0, nullptr);
+        std::vector<FeedForwardNetwork::Layer> layers;
+        layers.emplace_back(image_size, FeedForwardNetwork::ActivationFunc::Identity);
+        layers.emplace_back(neurons, FeedForwardNetwork::ActivationFunc::Sigmoid);
+        layers.emplace_back(10, FeedForwardNetwork::ActivationFunc::Sigmoid);
+        FeedForwardNetwork network(layers);
+        network.StochasticGradientDescent(training_data, 1000, 10, 10, 0.5, nullptr);
     }
 }
 

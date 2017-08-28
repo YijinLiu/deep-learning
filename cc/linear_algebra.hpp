@@ -9,22 +9,32 @@
 #define Vector Eigen::VectorXf
 #define Matrix Eigen::MatrixXf
 
-inline void InitializeVector(Eigen::VectorXf& vec, const Eigen::VectorXf& tpl) {
+inline void Zeros(Eigen::VectorXf& vec, const Eigen::VectorXf& tpl) {
     vec.resize(tpl.size());
     vec.fill(0.f);
 }
 
-inline void InitializeMatrix(Eigen::MatrixXf& mat, const Eigen::MatrixXf& tpl) {
+inline void Zeros(Eigen::MatrixXf& mat, const Eigen::MatrixXf& tpl) {
     mat.resize(tpl.rows(), tpl.cols());
     mat.fill(0.f);
 }
 
-inline void RandomizeVector(Eigen::VectorXf& vec, int size) {
+inline void Ones(Eigen::VectorXf& vec, const Eigen::VectorXf& tpl) {
+    vec.resize(tpl.size());
+    vec.fill(1.f);
+}
+
+inline void Ones(Eigen::MatrixXf& mat, const Eigen::MatrixXf& tpl) {
+    mat.resize(tpl.rows(), tpl.cols());
+    mat.fill(1.f);
+}
+
+inline void Randomize(Eigen::VectorXf& vec, int size) {
     vec.resize(size);
     vec.setRandom();
 }
 
-inline void RandomizeMatrix(Eigen::MatrixXf& mat, int rows, int cols) {
+inline void Randomize(Eigen::MatrixXf& mat, int rows, int cols) {
     mat.resize(rows, cols);
     mat.setRandom();
 }
@@ -68,7 +78,7 @@ inline Eigen::VectorXf ReLU(const Eigen::VectorXf& z) {
 }
 
 inline Eigen::VectorXf ReLUDerivative(const Eigen::VectorXf& z) {
-    const Eigen::VectorXf d = Sigmoid(z);
+    Eigen::VectorXf d = Sigmoid(z);
     for (int i = 0; i < z.size(); i++) {
         if (z(i) < 0) {
             d(i) = 0.f;
@@ -98,20 +108,28 @@ inline Eigen::VectorXf SoftMax(const Eigen::VectorXf& z) {
 #define Vector arma::Col<float>
 #define Matrix arma::Mat<float>
 
-inline void InitializeVector(arma::Col<float>& vec, const arma::Col<float>& tpl) {
+inline void Zeros(arma::Col<float>& vec, const arma::Col<float>& tpl) {
     vec.zeros(tpl.n_elem);
 }
 
-inline void InitializeMatrix(arma::Mat<float>& mat, const arma::Mat<float>& tpl) {
+inline void Zeros(arma::Mat<float>& mat, const arma::Mat<float>& tpl) {
     mat.zeros(tpl.n_rows, tpl.n_cols);
 }
 
-inline void RandomizeVector(arma::Mat<float>& vec, int size) {
-    vec.randn(size);
+inline void Ones(arma::Col<float>& vec, const arma::Col<float>& tpl) {
+    vec.ones(tpl.n_elem);
 }
 
-inline void RandomizeMatrix(arma::Mat<float>& mat, int rows, int cols) {
-    mat.randn(rows, cols);
+inline void Ones(arma::Mat<float>& mat, const arma::Mat<float>& tpl) {
+    mat.ones(tpl.n_rows, tpl.n_cols);
+}
+
+inline void Randomize(arma::Mat<float>& vec, int size) {
+    vec.randu(size);
+}
+
+inline void Randomize(arma::Mat<float>& mat, int rows, int cols) {
+    mat.randu(rows, cols);
 }
 
 inline int IndexMax(const arma::Col<float>& vec) {
@@ -120,7 +138,7 @@ inline int IndexMax(const arma::Col<float>& vec) {
 
 inline void ElemWiseMul(arma::Col<float>& v1, const arma::Col<float>& v2) {
     v1 %= v2;
-} 
+}
 
 inline arma::Mat<float> Transpose(const arma::Mat<float>& mat) {
     return mat.t();
@@ -145,13 +163,13 @@ inline arma::Col<float> SigmoidDerivative(const arma::Col<float>& z) {
     return s % (arma::ones<arma::Col<float>>(z.n_elem) - s);
 }
 
-inline arma::Col<float> LeRU(const arma::Col<float>& z) {
+inline arma::Col<float> ReLU(const arma::Col<float>& z) {
     arma::Col<float> a(z.n_elem);
     for (int i = 0; i < z.n_elem; i++) a[i] = std::max(z[i], 0.f);
     return a;
 }
 
-inline arma::Col<float> LeRUDerivative(const arma::Col<float>& z) {
+inline arma::Col<float> ReLUDerivative(const arma::Col<float>& z) {
     arma::Col<float> d(z.n_elem);
     for (int i = 0; i < z.n_elem; i++) {
         if (z[i] < 0.f) {
@@ -174,9 +192,6 @@ inline arma::Col<float> SoftMax(const arma::Col<float>& z) {
     }
     a /= sum;
     return a;
-}
-
-inline arma::Col<float> SoftMaxDerivative(const arma::Col<float>& z) {
 }
 
 #else

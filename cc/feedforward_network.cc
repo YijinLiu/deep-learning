@@ -8,13 +8,33 @@
 
 #include <glog/logging.h>
 
-FeedForwardNetwork::FeedForwardNetwork(const std::vector<Layer>& layers, CostFunc cost)
-    : layers_(layers), cost_(cost) {
+FeedForwardNetwork::FeedForwardNetwork(const std::vector<Layer>& layers, float weight_decay)
+    : layers_(layers), weight_decay_(weight_decay) {
+    // Check layers.
+    CHECK_GE(layers.size(), 2);
+    const auto& input_layer = layers.front();
+    if (input_layer.activation != ActivationFunc::Identity) {
+        LOG(FATAL)
+            << "Input layer's activation function needs to be identity, found "
+            << static_cast<int>(input_layer.activation);
+    }
+    const auto& output_layer = layers.back();
+    switch (output_layer.activation) {
+        case ActivationFunc::Sigmoid:
+        case ActivationFunc::SoftMax:
+            break;
+        default:
+            LOG(FATAL)
+                << "Output layer's activation function needs to be sigmoid or softmax, found "
+                << static_cast<int>(output_layer.activation);
+    }
+
+    // Init parameters.
     biases_.resize(layers.size() - 1);
-    for (int i = 1; i < layers.size(); i++) RandomizeVector(biases_[i-1], layers[i].num_neurons);
+    for (int i = 1; i < layers.size(); i++) Randomize(biases_[i-1], layers[i].num_neurons);
     weights_.resize(layers.size() - 1);
     for (int i = 1; i < layers.size(); i++) {
-        RandomizeMatrix(weights_[i-1], layers[i].num_neurons, layers[i-1].num_neurons);
+        Randomize(weights_[i-1], layers[i].num_neurons, layers[i-1].num_neurons);
     }
 }
 
@@ -38,7 +58,7 @@ void FeedForwardNetwork::StochasticGradientDescent(
         if (testing_data != nullptr) {
             const size_t corrects = Evaluate(*testing_data);
             VLOG(1) << "Epoch " << e + 1 << ": "
-                << std::setprecision(2) << float(corrects) / testing_data->size()
+                << std::setprecision(3) << float(corrects) / testing_data->size()
                 << "(" << corrects << "/" << testing_data->size() << ").";
         }
     }
@@ -47,43 +67,53 @@ void FeedForwardNetwork::StochasticGradientDescent(
 Vector FeedForwardNetwork::Activation(int layer, const Vector& z) const {
     Vector ret;
     switch (layers_[layer].activation) {
-        case kActivationFuncReLU:
-            ret = LeRU(z);
+        case ActivationFunc::Identity:
+            ret = z;
             break;
-        case kActivationFuncSigmoid:
+        case ActivationFunc::ReLU:
+            ret = ReLU(z);
+            break;
+        case ActivationFunc::Sigmoid:
             ret = Sigmoid(z);
             break;
-        case kActivationFuncSoftMax:
+        case ActivationFunc::SoftMax:
             ret = SoftMax(z);
             break;
         default:
-            LOG(FATAL) << "Unknown activation function: " << layers_[layer].activation;
+            LOG(FATAL)
+                << "Unknown activation function: "
+                << static_cast<int>(layers_[layer].activation);
     }
     return ret;
 }
 
-Vector FeedForwardNetwork::ActivationDerirative(int layer, const Vector& z) const {
+Vector FeedForwardNetwork::ActivationDerivative(int layer, const Vector& z) const {
     Vector ret;
     switch (layers_[layer].activation) {
-        case kActivationFuncReLU:
-            ret = LeRUDerivative(z);
+        case ActivationFunc::Identity:
+            Ones(ret, z);
             break;
-        case kActivationFuncSigmoid:
+        case ActivationFunc::ReLU:
+            ret = ReLUDerivative(z);
+            break;
+        case ActivationFunc::Sigmoid:
             ret = SigmoidDerivative(z);
             break;
-        case kActivationFuncSoftMax:
-            ret = SoftMaxDerivative(z);
+        case ActivationFunc::SoftMax:
+            LOG(FATAL) << "SoftMax should only be used in output layer!";
             break;
         default:
-            LOG(FATAL) << "Unknown activation function: " << layers_[layer].activation;
+            LOG(FATAL)
+                << "Unknown activation function: "
+                << static_cast<int>(layers_[layer].activation);
     }
     return ret;
 }
 
 Vector FeedForwardNetwork::FeedForward(const Vector& x) const {
     Vector a = x;
-    for (int i = 0; i < layers_.size() - 1; i++) {
-        a = Activation(i+1, weights_[i] * a + biases_[i]);
+    for (int i = 1; i < layers_.size(); i++) {
+        a = Activation(i, weights_[i-1] * a + biases_[i-1]);
     }
     return a;
 }
@@ -103,46 +133,50 @@ void FeedForwardNetwork::UpdateMiniBatch(const std::vector<Case>& training_data,
     // Initialize deltas as zero.
     std::vector<Vector> biases_delta(biases_.size());
     for (int i = 0; i < biases_.size(); i++) {
-        InitializeVector(biases_delta[i], biases_[i]);
+        Zeros(biases_delta[i], biases_[i]);
     }
     std::vector<Matrix> weights_delta(weights_.size());
     for (int i = 0; i < weights_.size(); i++) {
-        InitializeMatrix(weights_delta[i], weights_[i]);
+        Zeros(weights_delta[i], weights_[i]);
     }
     for (auto iter = begin; iter != end; iter++) {
         const auto& sample = training_data[*iter];
         BackPropagate(sample.first, sample.second, biases_delta, weights_delta);
     }
     const float multiplier = learning_rate / (end - begin);
-    for (int i = 0; i < biases_.size(); i++) biases_[i] -= biases_delta[i] * multiplier;
-    for (int i = 0; i < weights_.size(); i++) weights_[i] -= weights_delta[i] * multiplier;
+    for (int i = 0; i < biases_.size(); i++) {
+        biases_[i] -= biases_delta[i] * multiplier;
+    }
+    for (int i = 0; i < weights_.size(); i++) {
+        weights_[i] *= weight_decay_;
+        weights_[i] -= weights_delta[i] * multiplier;
+    }
 }
 
 void FeedForwardNetwork::BackPropagate(const Vector& x, int y,
                                        std::vector<Vector>& biases_delta,
                                        std::vector<Matrix>& weights_delta) {
-    std::vector<Vector> zs;
-    std::vector<Vector> as;
-    Vector a = x;
-    as.push_back(a);
     const int n = layers_.size();
+    std::vector<Vector> zs(n - 1);
+    std::vector<Vector> as(n);
+    Vector a = x;
+    as[0] = a;
     for (int i = 1; i < n; i++) {
         const Vector z = weights_[i-1] * a + biases_[i-1];
-        zs.push_back(z);
-        a = Activation(i, z);
-        as.push_back(a);
+        zs[i-1] = z;
+        as[i] = a = Activation(i, z);
     }
-    if (cost_ == kCostFuncMeanSquareError) {
-        Vector delta = a;
-        delta[y] -= 1.f;
-        for (int i = n - 1; i >= 0; i--) {
-            ElemWiseMul(delta, ActivatonDerivative(i+1, zs[i]));
-            biases_delta[i] += delta;
-            weights_delta[i] += delta * Transpose(as[i]);
-            if (i > 0) ApplyOnLeft(delta, Transpose(weights_[i]));
-        }
-    } else if (cost_ == kCostFuncCrossEntropy) {
-    } else {
-        LOG(FATAL) << "Unknown cost function: " << cost_;
+    // When the output layer's activation is sigmoid, we use cross entropy cost.
+    // When the output layer's activation is softmax, we use max likelihood.
+    // The gradient of z at output layer is "a - y" for both cases.
+    Vector delta = a;
+    delta[y] -= 1.f;
+    biases_delta[n-2] += delta;
+    weights_delta[n-2] += delta * Transpose(as[n-2]);
+    for (int i = n - 2; i > 0; i--) {
+        ApplyOnLeft(delta, Transpose(weights_[i]));
+        ElemWiseMul(delta, ActivationDerivative(i, zs[i-1]));
+        biases_delta[i-1] += delta;
+        weights_delta[i-1] += delta * Transpose(as[i-1]);
     }
 }
