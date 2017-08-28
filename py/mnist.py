@@ -5,7 +5,8 @@ import struct
 
 import numpy as np
 
-IMAGE_SIZE = 28
+IMAGE_WIDTH = 28
+IMAGE_HEIGHT = 28
 
 IDX_DATA_TYPE_U8 = 0x8
 IDX_DATA_TYPE_S8 = 0x9

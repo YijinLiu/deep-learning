@@ -178,7 +178,7 @@ def test_feedforward_network_n128(benchmark):
     global training_data
     if not training_data:
         training_data = mnist.load("train")
-    net = simple.Network([28 * 28, 128, 10])
+    net = feedforward.Network([28 * 28, 128, 10])
     @benchmark
     def train():
         net.stochastic_gradient_descent(training_data, 1000, epochs=10, mini_batch_size=10,
@@ -197,7 +197,7 @@ def test_feedforward_network_n256(benchmark):
     global training_data
     if not training_data:
         training_data = mnist.load("train")
-    net = simple.Network([28 * 28, 256, 10])
+    net = feedforward.Network([28 * 28, 256, 10])
     @benchmark
     def train():
         net.stochastic_gradient_descent(training_data, 1000, epochs=10, mini_batch_size=10,
@@ -216,7 +216,7 @@ def test_feedforward_network_n512(benchmark):
     global training_data
     if not training_data:
         training_data = mnist.load("train")
-    net = simple.Network([28 * 28, 512, 10])
+    net = feedforward.Network([28 * 28, 512, 10])
     @benchmark
     def train():
         net.stochastic_gradient_descent(training_data, 1000, epochs=10, mini_batch_size=10,
@@ -235,7 +235,7 @@ def test_feedforward_network_n1024(benchmark):
     global training_data
     if not training_data:
         training_data = mnist.load("train")
-    net = simple.Network([28 * 28, 1024, 10])
+    net = feedforward.Network([28 * 28, 1024, 10])
     @benchmark
     def train():
         net.stochastic_gradient_descent(training_data, 1000, epochs=10, mini_batch_size=10,
@@ -254,7 +254,7 @@ def test_feedforward_network_n2048(benchmark):
     global training_data
     if not training_data:
         training_data = mnist.load("train")
-    net = simple.Network([28 * 28, 2048, 10])
+    net = feedforward.Network([28 * 28, 2048, 10])
     @benchmark
     def train():
         net.stochastic_gradient_descent(training_data, 1000, epochs=10, mini_batch_size=10,

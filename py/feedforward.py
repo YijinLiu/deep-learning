@@ -94,13 +94,14 @@ if __name__ == "__main__":
             help="number of training samples to use per epoch")
     parser.add_argument("--down_sample_rate", type=int, default=1, help="down sample the images")
     args = parser.parse_args()
-    size = mnist.IMAGE_SIZE / args.down_sample_rate
-    net = Network([size * size, args.neurons, 10])
+    width = mnist.IMAGE_WIDTH / args.down_sample_rate
+    height = mnist.IMAGE_HEIGHT / args.down_sample_rate
+    net = Network([width * height, args.neurons, 10])
     training_data = mnist.load("train")
     testing_data = test_data=mnist.load("t10k")
     if args.down_sample_rate > 1:
         def down_sample(sample):
-            return (img_util.down_sample(sample[0], mnist.IMAGE_SIZE, mnist.IMAGE_SIZE,
+            return (img_util.down_sample(sample[0], mnist.IMAGE_WIDTH, mnist.IMAGE_HEIGHT,
                                          args.down_sample_rate, args.down_sample_rate),
                     sample[1])
         training_data = map(down_sample, training_data)
