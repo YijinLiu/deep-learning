@@ -6,11 +6,11 @@
 #include <utility>
 #include <vector>
 
-#include <Eigen/Dense>
+#include "linear_algebra.hpp"
 
 class FeedForwardNetwork {
   public:
-    typedef std::pair<Eigen::VectorXf, int> Case;
+    typedef std::pair<Vector, int> Case;
 
     explicit FeedForwardNetwork(const std::vector<size_t> layer_sizes);
 
@@ -26,15 +26,14 @@ class FeedForwardNetwork {
         std::vector<int>::const_iterator begin, std::vector<int>::const_iterator end,
         float learning_rate);
 
-    Eigen::VectorXf FeedForward(const Eigen::VectorXf& x) const;
+    Vector FeedForward(const Vector& x) const;
 
-    void BackPropagate(const Eigen::VectorXf& x, int y,
-                       std::vector<Eigen::VectorXf>& biases_delta,
-                       std::vector<Eigen::MatrixXf>& weights_delta);
+    void BackPropagate(const Vector& x, int y,
+                       std::vector<Vector>& biases_delta, std::vector<Matrix>& weights_delta);
 
     const size_t num_layers_;
-    std::vector<Eigen::VectorXf> biases_;
-    std::vector<Eigen::MatrixXf> weights_;
+    std::vector<Vector> biases_;
+    std::vector<Matrix> weights_;
 };
 
 #endif  // DEEP_LEARNING_FEEDFORWARD_NETWORK_HPP_

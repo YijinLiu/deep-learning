@@ -8,32 +8,13 @@
 
 #include <glog/logging.h>
 
-namespace {
-
-Eigen::VectorXf Sigmoid(const Eigen::VectorXf& z) {
-    Eigen::VectorXf s(z.size());
-    for (int i = 0; i < z.size(); i++) s(i) = 1.f / (1.f + expf(-z(i)));
-    return s;
-}
-
-Eigen::VectorXf SigmoidDerivative(const Eigen::VectorXf& z) {
-    const Eigen::VectorXf s = Sigmoid(z);
-    return s.cwiseProduct(Eigen::VectorXf::Constant(z.size(), 1.f) - s);
-}
-
-}  // namespace
-
 FeedForwardNetwork::FeedForwardNetwork(const std::vector<size_t> layer_sizes)
     : num_layers_(layer_sizes.size()) {
     biases_.resize(num_layers_ - 1);
-    for (int i = 1; i < num_layers_; i++) {
-        biases_[i - 1].resize(layer_sizes[i]);
-        biases_[i - 1].setRandom();
-    }
+    for (int i = 1; i < num_layers_; i++) RandomizeVector(biases_[i - 1], layer_sizes[i]);
     weights_.resize(num_layers_ - 1);
     for (int i = 1; i < num_layers_; i++) {
-        weights_[i - 1].resize(layer_sizes[i], layer_sizes[i - 1]);
-        weights_[i - 1].setRandom();
+        RandomizeMatrix(weights_[i - 1], layer_sizes[i], layer_sizes[i - 1]);
     }
 }
 
@@ -63,8 +44,8 @@ void FeedForwardNetwork::StochasticGradientDescent(
     }
 }
 
-Eigen::VectorXf FeedForwardNetwork::FeedForward(const Eigen::VectorXf& x) const {
-    Eigen::VectorXf a = x;
+Vector FeedForwardNetwork::FeedForward(const Vector& x) const {
+    Vector a = x;
     for (int i = 0; i < num_layers_ - 1; i++) a = Sigmoid(weights_[i] * a + biases_[i]);
     return a;
 }
@@ -72,9 +53,7 @@ Eigen::VectorXf FeedForwardNetwork::FeedForward(const Eigen::VectorXf& x) const 
 size_t FeedForwardNetwork::Evaluate(const std::vector<Case>& testing_data) {
     size_t corrects = 0;
     for (const auto& sample : testing_data) {
-        int index;
-        FeedForward(sample.first).maxCoeff(&index);
-        if (index == sample.second) corrects++;
+        if (IndexMax(FeedForward(sample.first)) == sample.second) corrects++;
     }
     return corrects;
 }
@@ -84,15 +63,13 @@ void FeedForwardNetwork::UpdateMiniBatch(const std::vector<Case>& training_data,
                                          std::vector<int>::const_iterator end,
                                          float learning_rate) {
     // Initialize deltas as zero.
-    std::vector<Eigen::VectorXf> biases_delta(biases_.size());
+    std::vector<Vector> biases_delta(biases_.size());
     for (int i = 0; i < biases_.size(); i++) {
-        biases_delta[i].resize(biases_[i].size());
-        biases_delta[i].fill(0.f);
+        InitializeVector(biases_delta[i], biases_[i]);
     }
-    std::vector<Eigen::MatrixXf> weights_delta(weights_.size());
+    std::vector<Matrix> weights_delta(weights_.size());
     for (int i = 0; i < weights_.size(); i++) {
-        weights_delta[i].resize(weights_[i].rows(), weights_[i].cols());
-        weights_delta[i].fill(0.f);
+        InitializeMatrix(weights_delta[i], weights_[i]);
     }
     for (auto iter = begin; iter != end; iter++) {
         const auto& sample = training_data[*iter];
@@ -103,26 +80,26 @@ void FeedForwardNetwork::UpdateMiniBatch(const std::vector<Case>& training_data,
     for (int i = 0; i < weights_.size(); i++) weights_[i] -= weights_delta[i] * multiplier;
 }
 
-void FeedForwardNetwork::BackPropagate(const Eigen::VectorXf& x, int y,
-                                       std::vector<Eigen::VectorXf>& biases_delta,
-                                       std::vector<Eigen::MatrixXf>& weights_delta) {
-    std::vector<Eigen::VectorXf> zs;
-    std::vector<Eigen::VectorXf> as;
-    Eigen::VectorXf a = x;
+void FeedForwardNetwork::BackPropagate(const Vector& x, int y,
+                                       std::vector<Vector>& biases_delta,
+                                       std::vector<Matrix>& weights_delta) {
+    std::vector<Vector> zs;
+    std::vector<Vector> as;
+    Vector a = x;
     as.push_back(a);
     const int n = num_layers_ - 1;
     for (int i = 0; i < n; i++) {
-        const Eigen::VectorXf z = weights_[i] * a + biases_[i];
+        const Vector z = weights_[i] * a + biases_[i];
         zs.push_back(z);
         a = Sigmoid(z);
         as.push_back(a);
     }
-    Eigen::VectorXf delta = a;
+    Vector delta = a;
     delta[y] -= 1.f;
     for (int i = n - 1; i >= 0; i--) {
-        delta = delta.cwiseProduct(SigmoidDerivative(zs[i]));
+        ElemWiseMul(delta, SigmoidDerivative(zs[i]));
         biases_delta[i] += delta;
-        weights_delta[i] += delta * as[i].transpose();
-        if (i > 0) delta.applyOnTheLeft(weights_[i].transpose());
+        weights_delta[i] += delta * Transpose(as[i]);
+        if (i > 0) ApplyOnLeft(delta, Transpose(weights_[i]));
     }
 }

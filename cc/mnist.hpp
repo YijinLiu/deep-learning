@@ -4,8 +4,8 @@
 #include <utility>
 #include <vector>
 
-#include <Eigen/Dense>
+#include "linear_algebra.hpp"
 
-std::vector<std::pair<Eigen::VectorXf, int>> LoadMNISTData(const char* dir, const char* name);
+std::vector<std::pair<Vector, int>> LoadMNISTData(const char* dir, const char* name);
 
 #endif  // DEEP_LEARNING_MNIST_HPP_

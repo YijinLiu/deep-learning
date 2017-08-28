@@ -43,8 +43,7 @@ uint32_t ReadIDXFile(FILE* fh, std::vector<uint32_t>& dimensions) {
 
 }  // namespace
 
-std::vector<std::pair<Eigen::VectorXf, int>> LoadMNISTData(
-    const char* cstr_dir, const char* cstr_name) {
+std::vector<std::pair<Vector, int>> LoadMNISTData(const char* cstr_dir, const char* cstr_name) {
     std::string dir;
     if (cstr_dir == nullptr) {
         char path[1000];
@@ -76,14 +75,14 @@ std::vector<std::pair<Eigen::VectorXf, int>> LoadMNISTData(
     const uint32_t num_labels = label_dims[0];
     CHECK_EQ(num_images, num_labels) << "#images != #labels: " << num_images << "!=" << num_labels;
 
-    std::vector<std::pair<Eigen::VectorXf, int>> results(num_images);
+    std::vector<std::pair<Vector, int>> results(num_images);
     std::unique_ptr<uint8_t[]> image_data(new uint8_t[image_size]);
     for (int i = 0; i < num_images; i++) {
         size_t bytes = fread(image_data.get(), 1, image_size, images_fh);
         CHECK_EQ(bytes, image_size) << "Failed to read image #" << i;
-        Eigen::VectorXf& image = results[i].first;
+        Vector& image = results[i].first;
         image.resize(image_size);
-        for (int j = 0; j < image_size; j++) image(j) = image_data[j] / 256.f;
+        for (int j = 0; j < image_size; j++) image[j] = image_data[j] / 256.f;
         uint8_t label;
         bytes = fread(&label, 1, 1, labels_fh);
         CHECK_EQ(bytes, 1) << "Failed to read label #" << i;
