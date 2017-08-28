@@ -43,7 +43,7 @@ uint32_t ReadIDXFile(FILE* fh, std::vector<uint32_t>& dimensions) {
 
 }  // namespace
 
-std::vector<std::pair<Vector, int>> LoadMNISTData(const char* cstr_dir, const char* cstr_name) {
+std::vector<Case> LoadMNISTData(const char* cstr_dir, const char* cstr_name) {
     std::string dir;
     if (cstr_dir == nullptr) {
         char path[1000];
@@ -75,7 +75,7 @@ std::vector<std::pair<Vector, int>> LoadMNISTData(const char* cstr_dir, const ch
     const uint32_t num_labels = label_dims[0];
     CHECK_EQ(num_images, num_labels) << "#images != #labels: " << num_images << "!=" << num_labels;
 
-    std::vector<std::pair<Vector, int>> results(num_images);
+    std::vector<Case> results(num_images);
     std::unique_ptr<uint8_t[]> image_data(new uint8_t[image_size]);
     for (int i = 0; i < num_images; i++) {
         size_t bytes = fread(image_data.get(), 1, image_size, images_fh);

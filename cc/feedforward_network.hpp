@@ -6,26 +6,10 @@
 #include <utility>
 #include <vector>
 
-#include "linear_algebra.hpp"
+#include "common.hpp"
 
 class FeedForwardNetwork {
   public:
-    enum class ActivationFunc {
-        Identity,
-        ReLU,
-        Sigmoid,
-        SoftMax
-    };
-
-    struct Layer {
-        Layer(int num_neurons, ActivationFunc activation) : num_neurons(num_neurons),
-                                                            activation(activation) {}
-        int num_neurons;
-        ActivationFunc activation;
-    };
-
-    typedef std::pair<Vector, int> Case;
-
     FeedForwardNetwork(const std::vector<Layer>& layers, float weight_decay);
 
     void StochasticGradientDescent(

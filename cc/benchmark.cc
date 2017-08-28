@@ -2,8 +2,8 @@
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 
-#include "mnist.hpp"
 #include "feedforward_network.hpp"
+#include "mnist.hpp"
 
 namespace {
 
@@ -32,11 +32,11 @@ void BM_FeedForwardNetwork(benchmark::State& state) {
     const auto training_data = LoadMNISTData(nullptr, "train");
     const size_t image_size = training_data[0].first.size();
     while (state.KeepRunning()) {
-        std::vector<FeedForwardNetwork::Layer> layers;
-        layers.emplace_back(image_size, FeedForwardNetwork::ActivationFunc::Identity);
-        layers.emplace_back(neurons, FeedForwardNetwork::ActivationFunc::Sigmoid);
-        layers.emplace_back(10, FeedForwardNetwork::ActivationFunc::Sigmoid);
-        FeedForwardNetwork network(layers);
+        std::vector<Layer> layers;
+        layers.emplace_back(image_size, ActivationFunc::Identity);
+        layers.emplace_back(neurons, ActivationFunc::Sigmoid);
+        layers.emplace_back(10, ActivationFunc::Sigmoid);
+        FeedForwardNetwork network(layers, 0.9999);
         network.StochasticGradientDescent(training_data, 1000, 10, 10, 0.5, nullptr);
     }
 }

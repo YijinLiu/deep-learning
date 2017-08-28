@@ -4,8 +4,8 @@
 #include <utility>
 #include <vector>
 
-#include "linear_algebra.hpp"
+#include "common.hpp"
 
-std::vector<std::pair<Vector, int>> LoadMNISTData(const char* dir, const char* name);
+std::vector<Case> LoadMNISTData(const char* dir, const char* name);
 
 #endif  // DEEP_LEARNING_MNIST_HPP_

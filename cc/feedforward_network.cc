@@ -5,6 +5,7 @@
 #include <time.h>
 
 #include <iomanip>
+#include <random>
 
 #include <glog/logging.h>
 
@@ -31,10 +32,18 @@ FeedForwardNetwork::FeedForwardNetwork(const std::vector<Layer>& layers, float w
 
     // Init parameters.
     biases_.resize(layers.size() - 1);
-    for (int i = 1; i < layers.size(); i++) Randomize(biases_[i-1], layers[i].num_neurons);
+    for (int i = 1; i < layers.size(); i++) {
+        Randomize(biases_[i-1], layers[i].num_neurons);
+    }
+    std::default_random_engine generator;
     weights_.resize(layers.size() - 1);
     for (int i = 1; i < layers.size(); i++) {
-        Randomize(weights_[i-1], layers[i].num_neurons, layers[i-1].num_neurons);
+        const int rows = layers[i].num_neurons;
+        const int cols = layers[i-1].num_neurons;
+        auto& weight = weights_[i-1];
+        weight.resize(rows, cols);
+        std::normal_distribution<float> distribution(0.f, 1.f / sqrtf(rows * cols));
+        for (int j = 0; j < rows * cols; j++) weight[j] = distribution(generator);
     }
 }
 
@@ -58,7 +67,7 @@ void FeedForwardNetwork::StochasticGradientDescent(
         if (testing_data != nullptr) {
             const size_t corrects = Evaluate(*testing_data);
             VLOG(1) << "Epoch " << e + 1 << ": "
-                << std::setprecision(3) << float(corrects) / testing_data->size()
+                << std::setprecision(4) << float(corrects) / testing_data->size()
                 << "(" << corrects << "/" << testing_data->size() << ").";
         }
     }
