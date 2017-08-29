@@ -42,7 +42,7 @@ FeedForwardNetwork::FeedForwardNetwork(const std::vector<Layer>& layers, float w
         const int cols = layers[i-1].num_neurons;
         auto& weight = weights_[i-1];
         weight.resize(rows, cols);
-        std::normal_distribution<float> distribution(0.f, 1.f / sqrtf(rows * cols));
+        std::normal_distribution<float> distribution(0.f, 2.f / (rows + cols));
         for (int j = 0; j < rows * cols; j++) weight[j] = distribution(generator);
     }
 }

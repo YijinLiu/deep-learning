@@ -22,7 +22,7 @@ int main(int argc, char* argv[]) {
     std::vector<Layer> layers;
     layers.emplace_back(image_size, ActivationFunc::Identity);
     layers.emplace_back(FLAGS_neurons, ActivationFunc::Sigmoid);
-    layers.emplace_back(10, ActivationFunc::Sigmoid);
+    layers.emplace_back(10, ActivationFunc::SoftMax);
     FeedForwardNetwork network(layers, FLAGS_weight_decay);
     network.StochasticGradientDescent(training_data, FLAGS_num_samples_per_epoch, FLAGS_epochs,
                                       FLAGS_mini_batch_size, FLAGS_learning_rate, &testing_data);
