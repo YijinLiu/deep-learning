@@ -1,8 +1,7 @@
 #ifndef DEEP_LEARNING_CAFFE2_HPP_
 #define DEEP_LEARNING_CAFFE2_HPP_
 
-#include <caffe2/core/init.h>
-#include <caffe2/core/operator.h>
+#include <caffe2/core/workspace.h>
 
 #include "common.hpp"
 
@@ -18,6 +17,8 @@ class Caffe2FeedForwardNetwork {
 
   private:
     caffe2::Workspace workspace_;
+    const std::vector<Layer> layers_;
+    const float weight_decay_;
 };
 
 #endif
