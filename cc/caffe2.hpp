@@ -1,8 +1,6 @@
 #ifndef DEEP_LEARNING_CAFFE2_HPP_
 #define DEEP_LEARNING_CAFFE2_HPP_
 
-#include <caffe2/core/workspace.h>
-
 #include "common.hpp"
 
 class Caffe2FeedForwardNetwork {
@@ -16,7 +14,8 @@ class Caffe2FeedForwardNetwork {
     size_t Evaluate(const std::vector<Case>& testing_data);
 
   private:
-    caffe2::Workspace workspace_;
+    std::string AddLayers(caffe2::NetDef* net, bool train) const;
+
     const std::vector<Layer> layers_;
     const float weight_decay_;
 };
