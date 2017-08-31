@@ -1,7 +1,9 @@
 #include <benchmark/benchmark.h>
+#include <caffe2/core/init.h>
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 
+#include "caffe2.hpp"
 #include "feedforward_network.hpp"
 #include "mnist.hpp"
 
@@ -35,9 +37,23 @@ void BM_FeedForwardNetwork(benchmark::State& state) {
         std::vector<Layer> layers;
         layers.emplace_back(image_size, ActivationFunc::Identity);
         layers.emplace_back(neurons, ActivationFunc::Sigmoid);
-        layers.emplace_back(10, ActivationFunc::Sigmoid);
+        layers.emplace_back(10, ActivationFunc::SoftMax);
         FeedForwardNetwork network(layers, 0.9999);
         network.StochasticGradientDescent(training_data, 1000, 10, 10, 0.5, nullptr);
+    }
+}
+
+void BM_Caffe2FeedForwardNetwork(benchmark::State& state) {
+    const int neurons = state.range(0);
+    const auto training_data = LoadMNISTData(nullptr, "train");
+    const size_t image_size = training_data[0].first.size();
+    while (state.KeepRunning()) {
+        std::vector<Layer> layers;
+        layers.emplace_back(image_size, ActivationFunc::Identity);
+        layers.emplace_back(neurons, ActivationFunc::Sigmoid);
+        layers.emplace_back(10, ActivationFunc::SoftMax);
+        Caffe2FeedForwardNetwork network(layers, 10, 0.9999, 0.5);
+        network.Train(training_data, 1000, 10, nullptr);
     }
 }
 
@@ -49,8 +65,16 @@ BENCHMARK(BM_MatrixRank)->Unit(benchmark::kMicrosecond)->Repetitions(10)->Report
     ->RangeMultiplier(2)->Range(128, 2048);
 BENCHMARK(BM_FeedForwardNetwork)->Unit(benchmark::kMillisecond)->Repetitions(10)
     ->ReportAggregatesOnly()->RangeMultiplier(2)->Range(128, 2048);
+BENCHMARK(BM_Caffe2FeedForwardNetwork)->Unit(benchmark::kMillisecond)->Repetitions(10)
+    ->ReportAggregatesOnly()->RangeMultiplier(2)->Range(128, 2048);
 
-BENCHMARK_MAIN();
+int main(int argc, char** argv) {
+    gflags::SetCommandLineOption("v", "-1");
+    benchmark::Initialize(&argc, argv);
+    caffe2::GlobalInit(&argc, &argv);
+    ::benchmark::RunSpecifiedBenchmarks();
+}
+
 
 // 1. Linux i5-5575R 4.8.0-58-generic Armadillo-7.950.1 with ATLAS-3.10.3
 // BM_MatrixMul/128                 296 us

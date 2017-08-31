@@ -6,7 +6,7 @@ train_mnist: bin/train_mnist mnist_data
 	bin/train_mnist -v=1 -logtostderr
 
 caffe2_mnist: bin/caffe2_mnist mnist_data
-	bin/caffe2_mnist -v=1 -logtostderr
+	bin/caffe2_mnist -v=-1 -logtostderr
 
 BENCHMARK_FILTER?=
 
@@ -22,7 +22,10 @@ LALIB?=Armadillo
 LA_CXX_FLAGS/Eigen:=-I/usr/local/include/eigen3 -DUSE_EIGEN
 LA_CXX_FLAGS/Armadillo:=-DUSE_ARMADILLO
 
-CAFFE2_CXX_FLAGS:=-DCAFFE2_USE_MKL -I/usr/local/include/eigen3
+CAFFE2_CXX_FLAGS/MKL:=-DCAFFE2_USE_MKL
+CAFFE2_CXX_FLAGS:=$(CAFFE2_CXX_FLAGS/$(BLAS)) -I/usr/local/include/eigen3
+
+CAFFE2_LD_FLAGS:=-Wl,--whole-archive -lCaffe2_CPU -Wl,--no-whole-archive -lprotobuf
 
 CXX_FLAGS:=-std=gnu++11 -D_POSIX_C_SOURCE=200809L $(CAFFE2_CXX_FLAGS) $(BLAS_CXX_FLAGS/$(BLAS)) $(LA_CXX_FLAGS/$(LALIB))
 
@@ -37,13 +40,13 @@ bin/train_mnist: bin/train_mnist.o bin/feedforward_network.o bin/mnist.o
 	mkdir -p bin
 	g++ -o $@ $^ -Wl,-Bstatic $(BLAS_LD_FLAGS) -lglog -lgflags -Wl,-Bdynamic -lpthread -ldl
 
-bin/benchmark: bin/benchmark.o bin/feedforward_network.o bin/mnist.o
+bin/benchmark: bin/benchmark.o bin/caffe2.o bin/feedforward_network.o bin/mnist.o
 	mkdir -p bin
-	g++ -o $@ $^ -Wl,-Bstatic $(BLAS_LD_FLAGS) -lbenchmark -lglog -lgflags -Wl,-Bdynamic -lpthread -ldl
+	g++ -o $@ $^ -Wl,-Bstatic $(CAFFE2_LD_FLAGS) $(BLAS_LD_FLAGS) -lbenchmark -lglog -lgflags -Wl,-Bdynamic -lpthread -ldl
 
 bin/caffe2_mnist: bin/caffe2.o bin/caffe2_mnist.o bin/mnist.o
 	mkdir -p bin
-	g++ -o $@ $^ -Wl,-Bstatic -Wl,--whole-archive -lCaffe2_CPU -Wl,--no-whole-archive -lprotobuf $(BLAS_LD_FLAGS) -lglog -lgflags -Wl,-Bdynamic -lpthread -ldl
+	g++ -o $@ $^ -Wl,-Bstatic $(CAFFE2_LD_FLAGS) $(BLAS_LD_FLAGS) -lglog -lgflags -Wl,-Bdynamic -lpthread -ldl
 
 bin/feedforward_network.o: common.hpp feedforward_network.hpp linear_algebra.hpp
 

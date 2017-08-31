@@ -14,10 +14,11 @@
 
 #define INPUTS "inputs"
 #define LABELS "labels"
+#define EXPANDED_LABELS "expanded_labels"
 #define COST "cost"
 #define GRAD_SUFFIX "_grad"
 #define COST_GRAD COST GRAD_SUFFIX
-#define ONE "one"
+#define DECAY "decay"
 #define LR "lr"
 #define ACCURACY "accuracy"
 
@@ -66,7 +67,7 @@ caffe2::Argument* AddOpArg(caffe2::OperatorDef* op, const std::string& name,
 }
 
 caffe2::Argument* AddOpArg(caffe2::OperatorDef* op, const std::string& name,
-                           std::vector<int> values) {
+                           const std::vector<int>& values) {
     auto* arg = AddOpArg(op, name);
     for (auto value : values) arg->add_ints(value);
     return arg;
@@ -74,7 +75,7 @@ caffe2::Argument* AddOpArg(caffe2::OperatorDef* op, const std::string& name,
 
 
 caffe2::Argument* AddOpArg(caffe2::OperatorDef* op, const std::string& name,
-                           std::vector<float> values) {
+                           const std::vector<float>& values) {
     auto* arg = AddOpArg(op, name);
     for (auto value : values) arg->add_floats(value);
     return arg;
@@ -107,19 +108,24 @@ caffe2::OperatorDef* AddXavierFillOp(caffe2::NetDef* net, const std::vector<int>
 }  // namespace
 
 Caffe2FeedForwardNetwork::Caffe2FeedForwardNetwork(
-    const std::vector<Layer>& layers, int mini_batch_size, float learning_rate)
-    : layers_(layers), mini_batch_size_(mini_batch_size), workspace_("feedforward") {
+    const std::vector<Layer>& layers, int mini_batch_size, float weight_decay, float learning_rate)
+    : layers_(layers), mini_batch_size_(mini_batch_size), expands_label_(false),
+      workspace_("feedforward") {
     // Check layers.
     CHECK_GE(layers.size(), 2);
+
     const auto& input_layer = layers.front();
     if (input_layer.activation != ActivationFunc::Identity) {
         LOG(FATAL)
             << "Input layer's activation function needs to be identity, found "
             << static_cast<int>(input_layer.activation);
     }
+    input_size_ = input_layer.num_neurons;
+
     const auto& output_layer = layers.back();
     switch (output_layer.activation) {
         case ActivationFunc::Sigmoid:
+            expands_label_ = true;
         case ActivationFunc::SoftMax:
             break;
         default:
@@ -127,40 +133,57 @@ Caffe2FeedForwardNetwork::Caffe2FeedForwardNetwork(
                 << "Output layer's activation function needs to be sigmoid or softmax, found "
                 << static_cast<int>(output_layer.activation);
     }
+    output_classes_ = output_layer.num_neurons;
 
     // Init net.
     caffe2::NetDef init_net_def;
     init_net_def.set_name(INIT_NET_NAME);
     {
-        auto* op = AddOp(&init_net_def, "ConstantFill", {}, {ONE});
-        AddOpArg(op, "shape", {1});
-        AddOpArg(op, "value", 1.f);
+        auto* op = AddOp(&init_net_def, "ConstantFill", {}, {DECAY});
+        AddOpArg(op, "shape", std::vector<int>{1});
+        AddOpArg(op, "value", weight_decay);
     }
     // TODO: Use LearningRate operator.
     {
         auto* op = AddOp(&init_net_def, "ConstantFill", {}, {LR});
-        AddOpArg(op, "shape", {1});
-        AddOpArg(op, "value", learning_rate);
+        AddOpArg(op, "shape", std::vector<int>{1});
+        AddOpArg(op, "value", -learning_rate);
     }
     // Init parameters for every layer.
     for (int i = 1; i < layers.size(); i++) {
         const int rows = layers[i].num_neurons;
         const int cols = layers[i-1].num_neurons;
         AddXavierFillOp(&init_net_def, {rows, cols}, LayerW(i));
-        AddXavierFillOp(&init_net_def, {rows, 1}, LayerB(i));
+        AddXavierFillOp(&init_net_def, {rows}, LayerB(i));
     }
+    VLOG(0) << init_net_def.DebugString();
     caffe2::CreateNet(init_net_def, &workspace_)->Run();
+
+    auto* inputs_tensor = workspace_.CreateBlob(INPUTS)->GetMutable<caffe2::TensorCPU>();
+    inputs_tensor->Resize(mini_batch_size, input_size_);
+    inputs_data_ = inputs_tensor->mutable_data<float>();
+    auto* labels_tensor = workspace_.CreateBlob(LABELS)->GetMutable<caffe2::TensorCPU>();
+    labels_tensor->Resize(mini_batch_size);
+    labels_data_ = labels_tensor->mutable_data<int>();
+    if (expands_label_) {
+        auto* expanded_labels_tensor =
+            workspace_.CreateBlob(EXPANDED_LABELS)->GetMutable<caffe2::TensorCPU>();
+        expanded_labels_tensor->Resize(mini_batch_size, output_classes_);
+        expanded_labels_data_ = expanded_labels_tensor->mutable_data<float>();
+    }
 
     // Train net.
     caffe2::NetDef train_net_def;
     train_net_def.set_name(TRAIN_NET_NAME);
     AddLayers(&train_net_def, true);
+    VLOG(0) << train_net_def.DebugString();
     train_net_ = caffe2::CreateNet(train_net_def, &workspace_);
 
     // Create predict net.
     caffe2::NetDef predict_net_def;
     predict_net_def.set_name(PREDICT_NET_NAME);
     AddLayers(&predict_net_def, false);
+    VLOG(0) << predict_net_def.DebugString();
     predict_net_ = caffe2::CreateNet(predict_net_def, &workspace_);
 }
 
@@ -177,28 +200,16 @@ void Caffe2FeedForwardNetwork::Train(
             const size_t step = lrand48() % (training_data.size() - i);
             if (step > 0) std::swap(indices[i], indices[i + step]);
         }
-        auto* inputs_tensor = workspace_.CreateBlob(INPUTS)->GetMutable<caffe2::TensorCPU>();
-        const int input_size = layers_[0].num_neurons;
-        inputs_tensor->Resize(mini_batch_size_, input_size);
-        float* inputs_data = inputs_tensor->mutable_data<float>();
-        auto* labels_tensor = workspace_.CreateBlob(LABELS)->GetMutable<caffe2::TensorCPU>();
-        labels_tensor->Resize(mini_batch_size_);
-        int* labels_data = labels_tensor->mutable_data<int>();
         float accuracy = 0.0;
         for (int k = 0; k <= n - mini_batch_size_; k += mini_batch_size_) {
-            for (int i = 0; i < mini_batch_size_; i++) {
-                const auto& training_case = training_data[indices[k+i]];
-                memcpy(inputs_data + i * input_size, Data(training_case.first),
-                       input_size * sizeof(float));
-                labels_data[i] = training_case.second;
-            }
+            for (int i = 0; i < mini_batch_size_; i++) AddInput(i, training_data[indices[k+i]]);
             train_net_->Run();
             accuracy += Accuracy();
         }
         accuracy /= (n / mini_batch_size_);
-        VLOG(2) << "Epoch " << e + 1 << " training accuracy: " << std::setprecision(4) << accuracy;
+        VLOG(0) << "Epoch " << e + 1 << " training accuracy: " << std::setprecision(4) << accuracy;
         if (testing_data) {
-            VLOG(1) << "Epoch " << e + 1 << " testing accuracy: " << std::setprecision(4)
+            VLOG(-1) << "Epoch " << e + 1 << " testing accuracy: " << std::setprecision(4)
                 << Evaluate(*testing_data);
         }
     }
@@ -207,20 +218,8 @@ void Caffe2FeedForwardNetwork::Train(
 float Caffe2FeedForwardNetwork::Evaluate(const std::vector<Case>& testing_data) {
     const int n = testing_data.size();
     float accuracy = 0.0;
-    auto* inputs_tensor = workspace_.CreateBlob(INPUTS)->GetMutable<caffe2::TensorCPU>();
-    const int input_size = layers_[0].num_neurons;
-    inputs_tensor->Resize(mini_batch_size_, input_size);
-    float* inputs_data = inputs_tensor->mutable_data<float>();
-    auto* labels_tensor = workspace_.CreateBlob(LABELS)->GetMutable<caffe2::TensorCPU>();
-    int* labels_data = labels_tensor->mutable_data<int>();
-    labels_tensor->Resize(mini_batch_size_);
     for (int k = 0; k <= n - mini_batch_size_; k += mini_batch_size_) {
-        for (int i = 0; i < mini_batch_size_; i++) {
-            const auto& testing_case = testing_data[k+i];
-            memcpy(inputs_data + i * input_size, Data(testing_case.first),
-                   input_size * sizeof(float));
-            labels_data[i] = testing_case.second;
-        }
+        for (int i = 0; i < mini_batch_size_; i++) AddInput(i, testing_data[k+i]);
         predict_net_->Run();
         accuracy += Accuracy();
     }
@@ -235,18 +234,19 @@ float Caffe2FeedForwardNetwork::Evaluate(const std::vector<Case>& testing_data) 
 std::string Caffe2FeedForwardNetwork::AddLayers(caffe2::NetDef* net, bool train) const {
     net->add_external_input(INPUTS);
     net->add_external_input(LABELS);
+    if (train && expands_label_) net->add_external_input(EXPANDED_LABELS);
 
     // Add feedforward network layers.
     std::vector<const caffe2::OperatorDef*> gradient_ops;
     std::vector<std::string> params;
     std::string a = INPUTS;
-    for (int i = 1; i < layers_.size() - 1; i++) {
+    for (int i = 1; i < layers_.size(); i++) {
         const std::string w = LayerW(i);
         const std::string b = LayerB(i);
         const std::string z = LayerZ(i);
+        net->add_external_input(w);
+        net->add_external_input(b);
         if (train) {
-            net->add_external_input(w);
-            net->add_external_input(b);
             params.push_back(w);
             params.push_back(b);
         }
@@ -261,7 +261,7 @@ std::string Caffe2FeedForwardNetwork::AddLayers(caffe2::NetDef* net, bool train)
                 break;
             case ActivationFunc::Sigmoid:
                 if (train && i == layers_.size() - 1) {
-                    ADD_OP(net, "SigmoidCrossEntropyWithLogits", {z, LABELS}, {COST});
+                    ADD_OP(net, "SigmoidCrossEntropyWithLogits", {z, EXPANDED_LABELS}, {COST});
                     AddOp(net, "Sigmoid", {z}, {new_a});
                 } else {
                     ADD_OP(net, "Sigmoid", {z}, {new_a});
@@ -273,6 +273,7 @@ std::string Caffe2FeedForwardNetwork::AddLayers(caffe2::NetDef* net, bool train)
                 } else {
                     ADD_OP(net, "Softmax", {z}, {new_a});
                 }
+                break;
             default:
                 LOG(FATAL)
                     << "Unknown activation function: " << static_cast<int>(layers_[i].activation);
@@ -282,6 +283,7 @@ std::string Caffe2FeedForwardNetwork::AddLayers(caffe2::NetDef* net, bool train)
     AddOp(net, "Accuracy", {a, LABELS}, {ACCURACY});
 
     if (train) {
+        AddOp(net, "StopGradient", {INPUTS}, {INPUTS});
         // Add gradient operators.
         auto* grad = AddOp(net, "ConstantFill", {COST}, {COST_GRAD});
         AddOpArg(grad, "value", 1.f);
@@ -299,10 +301,10 @@ std::string Caffe2FeedForwardNetwork::AddLayers(caffe2::NetDef* net, bool train)
         }
 
         // Adjust parameters.
-        net->add_external_input(ONE);
+        net->add_external_input(DECAY);
         net->add_external_input(LR);
         for (const auto& param : params) {
-            AddOp(net, "WeightedSum", {param, ONE, param + GRAD_SUFFIX, LR}, {param});
+            AddOp(net, "WeightedSum", {param, DECAY, param + GRAD_SUFFIX, LR}, {param});
         }
     }
 
@@ -311,4 +313,14 @@ std::string Caffe2FeedForwardNetwork::AddLayers(caffe2::NetDef* net, bool train)
 
 float Caffe2FeedForwardNetwork::Accuracy() const {
     return workspace_.GetBlob(ACCURACY)->Get<caffe2::TensorCPU>().data<float>()[0];
+}
+
+void Caffe2FeedForwardNetwork::AddInput(int i, const Case& c) {
+    memcpy(inputs_data_ + i * input_size_, Data(c.first), input_size_ * sizeof(float));
+    labels_data_[i] = c.second;
+    if (expands_label_) {
+        for (int k = 0; k < output_classes_; k++) {
+            expanded_labels_data_[i * output_classes_ + k] = (k == c.second ? 1.f : 0.f);
+        }
+    }
 }
