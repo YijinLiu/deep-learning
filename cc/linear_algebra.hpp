@@ -9,6 +9,18 @@
 #define Vector Eigen::VectorXf
 #define Matrix Eigen::MatrixXf
 
+inline int Size(const Eigen::VectorXf& vec) { return vec.size(); }
+
+inline const float* Data(Eigen::VectorXf& vec) { return vec.data(); }
+
+inline float Max(const Eigen::VectorXf& vec) { return vec.maxCoeff(); }
+
+inline int MaxIndex(const Eigen::VectorXf& vec) {
+    int index;
+    vec.maxCoeff(&index);
+    return index;
+}
+
 inline void Zeros(Eigen::VectorXf& vec, const Eigen::VectorXf& tpl) {
     vec.resize(tpl.size());
     vec.fill(0.f);
@@ -37,12 +49,6 @@ inline void Randomize(Eigen::VectorXf& vec, int size) {
 inline void Randomize(Eigen::MatrixXf& mat, int rows, int cols) {
     mat.resize(rows, cols);
     mat.setRandom();
-}
-
-inline int IndexMax(const Eigen::VectorXf& vec) {
-    int index;
-    vec.maxCoeff(&index);
-    return index;
 }
 
 inline void ElemWiseMul(Eigen::VectorXf& v1, const Eigen::VectorXf& v2) {
@@ -77,36 +83,19 @@ inline Eigen::VectorXf ReLU(const Eigen::VectorXf& z) {
     return z.cwiseMax(0.f);
 }
 
-inline Eigen::VectorXf ReLUDerivative(const Eigen::VectorXf& z) {
-    Eigen::VectorXf d = Sigmoid(z);
-    for (int i = 0; i < z.size(); i++) {
-        if (z(i) < 0) {
-            d(i) = 0.f;
-        } else {
-            d(i) = 1.f;
-        }
-    }
-    return d;
-}
-
-inline Eigen::VectorXf SoftMax(const Eigen::VectorXf& z) {
-    Eigen::VectorXf a(z.size());
-    const float max = z.maxCoeff();
-    float sum = 0.f;
-    for (int i = 0; i < z.size(); i++) {
-        const float e = expf(z(i) - max);
-        a[i] = e;
-        sum += e;
-    }
-    a /= sum;
-    return a;
-}
-
 #elif defined(USE_ARMADILLO)
 
 #include <armadillo>
 #define Vector arma::Col<float>
 #define Matrix arma::Mat<float>
+
+inline int Size(const arma::Col<float>& vec) { return vec.n_elem; }
+
+inline const float* Data(const arma::Col<float>& vec) { return vec.memptr(); }
+
+inline float Max(const arma::Col<float>& vec) { return vec.max(); }
+
+inline int MaxIndex(const arma::Col<float>& vec) { return vec.index_max(); }
 
 inline void Zeros(arma::Col<float>& vec, const arma::Col<float>& tpl) {
     vec.zeros(tpl.n_elem);
@@ -132,10 +121,6 @@ inline void Randomize(arma::Mat<float>& mat, int rows, int cols) {
     mat.randu(rows, cols);
 }
 
-inline int IndexMax(const arma::Col<float>& vec) {
-    return vec.index_max();
-}
-
 inline void ElemWiseMul(arma::Col<float>& v1, const arma::Col<float>& v2) {
     v1 %= v2;
 }
@@ -154,7 +139,7 @@ inline int Rank(const arma::Mat<float>& mat) {
 
 inline arma::Col<float> Sigmoid(const arma::Col<float>& z) {
     arma::Col<float> s(z.n_elem);
-    for (int i = 0; i < z.n_elem; i++) s[i] = 1.f / (1.f + expf(-z[i]));
+    for (int i = 0; i < z.n_elem; i++) s(i) = 1.f / (1.f + expf(-z[i]));
     return s;
 }
 
@@ -165,32 +150,7 @@ inline arma::Col<float> SigmoidDerivative(const arma::Col<float>& z) {
 
 inline arma::Col<float> ReLU(const arma::Col<float>& z) {
     arma::Col<float> a(z.n_elem);
-    for (int i = 0; i < z.n_elem; i++) a[i] = std::max(z[i], 0.f);
-    return a;
-}
-
-inline arma::Col<float> ReLUDerivative(const arma::Col<float>& z) {
-    arma::Col<float> d(z.n_elem);
-    for (int i = 0; i < z.n_elem; i++) {
-        if (z[i] < 0.f) {
-            d[i] = 0.f;
-        } else {
-            d[i] = 1.f;
-        }
-    }
-    return d;
-}
-
-inline arma::Col<float> SoftMax(const arma::Col<float>& z) {
-    arma::Col<float> a(z.n_elem);
-    const float max = z.max();
-    float sum = 0.f;
-    for (int i = 0; i < z.n_elem; i++) {
-        const float e = expf(z[i] - max);
-        a[i] = e;
-        sum += e;
-    }
-    a /= sum;
+    for (int i = 0; i < z.n_elem; i++) a(i) = std::max(z[i], 0.f);
     return a;
 }
 
@@ -199,5 +159,31 @@ inline arma::Col<float> SoftMax(const arma::Col<float>& z) {
 #error "Please define either USE_EIGEN or USE_ARMADILLO"
 
 #endif
+
+inline Vector ReLUDerivative(const Vector& z) {
+    Vector d = Sigmoid(z);
+    for (int i = 0; i < Size(z); i++) {
+        if (z(i) < 0) {
+            d(i) = 0.f;
+        } else {
+            d(i) = 1.f;
+        }
+    }
+    return d;
+}
+
+inline Vector SoftMax(const Vector& z) {
+    const int n = Size(z);
+    Vector a(n);
+    const float max = Max(z);
+    float sum = 0.f;
+    for (int i = 0; i < n; i++) {
+        const float e = expf(z(i) - max);
+        a(i) = e;
+        sum += e;
+    }
+    a /= sum;
+    return a;
+}
 
 #endif  // DEEP_LEARNING_LINEAR_ALGEBRA_HPP_

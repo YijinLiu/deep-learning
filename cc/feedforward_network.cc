@@ -43,7 +43,11 @@ FeedForwardNetwork::FeedForwardNetwork(const std::vector<Layer>& layers, float w
         auto& weight = weights_[i-1];
         weight.resize(rows, cols);
         std::normal_distribution<float> distribution(0.f, 2.f / (rows + cols));
-        for (int j = 0; j < rows * cols; j++) weight[j] = distribution(generator);
+        for (int r = 0; r < rows; r++) {
+            for (int c = 0; c < cols; c++) {
+                weight(r, c) = distribution(generator);
+            }
+        }
     }
 }
 
@@ -60,13 +64,16 @@ void FeedForwardNetwork::StochasticGradientDescent(
             const size_t step = lrand48() % (training_data.size() - i);
             if (step > 0) std::swap(indices[i], indices[i + step]);
         }
+        int corrects = 0;
         for (size_t k = 0; k <= n - mini_batch_size; k += mini_batch_size) {
-            UpdateMiniBatch(training_data, indices.begin() + k, indices.begin() + k + mini_batch_size,
-                            learning_rate);
+            corrects += UpdateMiniBatch(training_data, indices.begin() + k,
+                                        indices.begin() + k + mini_batch_size, learning_rate);
         }
+        VLOG(2) << "Epoch " << e + 1 << " training accuracy: "
+            << std::setprecision(4) << float(corrects) / n << "(" << corrects << "/" << n << ").";
         if (testing_data != nullptr) {
             const size_t corrects = Evaluate(*testing_data);
-            VLOG(1) << "Epoch " << e + 1 << ": "
+            VLOG(1) << "Epoch " << e + 1 << " testing accuracy: "
                 << std::setprecision(4) << float(corrects) / testing_data->size()
                 << "(" << corrects << "/" << testing_data->size() << ").";
         }
@@ -130,15 +137,15 @@ Vector FeedForwardNetwork::FeedForward(const Vector& x) const {
 size_t FeedForwardNetwork::Evaluate(const std::vector<Case>& testing_data) {
     size_t corrects = 0;
     for (const auto& sample : testing_data) {
-        if (IndexMax(FeedForward(sample.first)) == sample.second) corrects++;
+        if (MaxIndex(FeedForward(sample.first)) == sample.second) corrects++;
     }
     return corrects;
 }
 
-void FeedForwardNetwork::UpdateMiniBatch(const std::vector<Case>& training_data,
-                                         std::vector<int>::const_iterator begin,
-                                         std::vector<int>::const_iterator end,
-                                         float learning_rate) {
+int FeedForwardNetwork::UpdateMiniBatch(const std::vector<Case>& training_data,
+                                        std::vector<int>::const_iterator begin,
+                                        std::vector<int>::const_iterator end,
+                                        float learning_rate) {
     // Initialize deltas as zero.
     std::vector<Vector> biases_delta(biases_.size());
     for (int i = 0; i < biases_.size(); i++) {
@@ -148,9 +155,10 @@ void FeedForwardNetwork::UpdateMiniBatch(const std::vector<Case>& training_data,
     for (int i = 0; i < weights_.size(); i++) {
         Zeros(weights_delta[i], weights_[i]);
     }
+    int corrects = 0;
     for (auto iter = begin; iter != end; iter++) {
         const auto& sample = training_data[*iter];
-        BackPropagate(sample.first, sample.second, biases_delta, weights_delta);
+        if (BackPropagate(sample.first, sample.second, biases_delta, weights_delta)) corrects++;
     }
     const float multiplier = learning_rate / (end - begin);
     for (int i = 0; i < biases_.size(); i++) {
@@ -160,9 +168,10 @@ void FeedForwardNetwork::UpdateMiniBatch(const std::vector<Case>& training_data,
         weights_[i] *= weight_decay_;
         weights_[i] -= weights_delta[i] * multiplier;
     }
+    return corrects;
 }
 
-void FeedForwardNetwork::BackPropagate(const Vector& x, int y,
+bool FeedForwardNetwork::BackPropagate(const Vector& x, int y,
                                        std::vector<Vector>& biases_delta,
                                        std::vector<Matrix>& weights_delta) {
     const int n = layers_.size();
@@ -188,4 +197,5 @@ void FeedForwardNetwork::BackPropagate(const Vector& x, int y,
         biases_delta[i-1] += delta;
         weights_delta[i-1] += delta * Transpose(as[i-1]);
     }
+    return MaxIndex(a) == y;
 }

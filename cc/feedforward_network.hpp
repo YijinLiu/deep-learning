@@ -19,7 +19,8 @@ class FeedForwardNetwork {
     size_t Evaluate(const std::vector<Case>& testing_data);
 
   private:
-    void UpdateMiniBatch(
+    // Returns number of correct predicts.
+    int UpdateMiniBatch(
         const std::vector<Case>& training_data,
         std::vector<int>::const_iterator begin, std::vector<int>::const_iterator end,
         float learning_rate);
@@ -29,7 +30,8 @@ class FeedForwardNetwork {
 
     Vector FeedForward(const Vector& x) const;
 
-    void BackPropagate(const Vector& x, int y,
+    // Returns whether it's a correct predict.
+    bool BackPropagate(const Vector& x, int y,
                        std::vector<Vector>& biases_delta, std::vector<Matrix>& weights_delta);
 
     const std::vector<Layer> layers_;
