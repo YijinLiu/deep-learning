@@ -1,9 +1,12 @@
-.PHONY: train_mnist benchmark mnist_data clean
+.PHONY: train_mnist caffe2_mnist benchmark mnist_data clean
 
 PROJECT_ROOT=$(shell readlink -f $(dir $(lastword $(MAKEFILE_LIST)))/..)
 
 train_mnist: bin/train_mnist mnist_data
 	bin/train_mnist -v=1 -logtostderr
+
+caffe2_mnist: bin/caffe2_mnist mnist_data
+	bin/caffe2_mnist -v=1 -logtostderr
 
 BENCHMARK_FILTER?=
 
@@ -19,7 +22,9 @@ LALIB?=Armadillo
 LA_CXX_FLAGS/Eigen:=-I/usr/local/include/eigen3 -DUSE_EIGEN
 LA_CXX_FLAGS/Armadillo:=-DUSE_ARMADILLO
 
-CXX_FLAGS:=-std=gnu++11 -D_POSIX_C_SOURCE=200809L $(BLAS_CXX_FLAGS/$(BLAS)) $(LA_CXX_FLAGS/$(LALIB))
+CAFFE2_CXX_FLAGS:=-DCAFFE2_USE_MKL -I/usr/local/include/eigen3
+
+CXX_FLAGS:=-std=gnu++11 -D_POSIX_C_SOURCE=200809L $(CAFFE2_CXX_FLAGS) $(BLAS_CXX_FLAGS/$(BLAS)) $(LA_CXX_FLAGS/$(LALIB))
 
 BLAS_LD_FLAGS/ATLAS:=-L/usr/local/ATLAS/lib -llapack -lcblas -lf77blas -latlas -lgfortran -lquadmath
 BLAS_LD_FLAGS/OpenBLAS:=-L/usr/local/OpenBLAS/lib -lopenblas -lgfortran -lquadmath
@@ -36,13 +41,21 @@ bin/benchmark: bin/benchmark.o bin/feedforward_network.o bin/mnist.o
 	mkdir -p bin
 	g++ -o $@ $^ -Wl,-Bstatic $(BLAS_LD_FLAGS) -lbenchmark -lglog -lgflags -Wl,-Bdynamic -lpthread -ldl
 
-bin/feedforward_network.o: feedforward_network.hpp linear_algebra.hpp
+bin/caffe2_mnist: bin/caffe2.o bin/caffe2_mnist.o bin/mnist.o
+	mkdir -p bin
+	g++ -o $@ $^ -Wl,-Bstatic -Wl,--whole-archive -lCaffe2_CPU -Wl,--no-whole-archive -lprotobuf $(BLAS_LD_FLAGS) -lglog -lgflags -Wl,-Bdynamic -lpthread -ldl
 
-bin/mnist.o: linear_algebra.hpp mnist.hpp
+bin/feedforward_network.o: common.hpp feedforward_network.hpp linear_algebra.hpp
 
-bin/benchmark.o: feedforward_network.hpp linear_algebra.hpp mnist.hpp
+bin/mnist.o: common.hpp linear_algebra.hpp mnist.hpp
 
-bin/train_mnist.o: feedforward_network.hpp linear_algebra.hpp mnist.hpp
+bin/benchmark.o: common.hpp feedforward_network.hpp linear_algebra.hpp mnist.hpp
+
+bin/train_mnist.o: common.hpp feedforward_network.hpp linear_algebra.hpp mnist.hpp
+
+bin/caffe2.o: caffe2.hpp common.hpp linear_algebra.hpp mnist.hpp
+
+bin/caffe2_mnist.o: caffe2.hpp common.hpp linear_algebra.hpp mnist.hpp
 
 bin/%.o: %.cc
 	mkdir -p bin
