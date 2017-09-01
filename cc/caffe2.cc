@@ -107,7 +107,7 @@ caffe2::OperatorDef* AddXavierFillOp(caffe2::NetDef* net, const std::vector<int>
 
 }  // namespace
 
-Caffe2FeedForwardNetwork::Caffe2FeedForwardNetwork(
+Caffe2SimpleNetwork::Caffe2SimpleNetwork(
     const std::vector<Layer>& layers, int mini_batch_size, float weight_decay, float learning_rate)
     : layers_(layers), mini_batch_size_(mini_batch_size), expands_label_(false),
       workspace_("feedforward") {
@@ -187,7 +187,7 @@ Caffe2FeedForwardNetwork::Caffe2FeedForwardNetwork(
     predict_net_ = caffe2::CreateNet(predict_net_def, &workspace_);
 }
 
-void Caffe2FeedForwardNetwork::Train(
+void Caffe2SimpleNetwork::Train(
     const std::vector<Case>& training_data, size_t num_samples_per_epoch, size_t epochs,
     const std::vector<Case>* testing_data) {
     size_t n = std::min(training_data.size(), num_samples_per_epoch);
@@ -209,13 +209,13 @@ void Caffe2FeedForwardNetwork::Train(
         accuracy /= (n / mini_batch_size_);
         VLOG(0) << "Epoch " << e + 1 << " training accuracy: " << std::setprecision(4) << accuracy;
         if (testing_data) {
-            VLOG(-1) << "Epoch " << e + 1 << " testing accuracy: " << std::setprecision(4)
+            LOG(INFO) << "Epoch " << e + 1 << " testing accuracy: " << std::setprecision(4)
                 << Evaluate(*testing_data);
         }
     }
 }
 
-float Caffe2FeedForwardNetwork::Evaluate(const std::vector<Case>& testing_data) {
+float Caffe2SimpleNetwork::Evaluate(const std::vector<Case>& testing_data) {
     const int n = testing_data.size();
     float accuracy = 0.0;
     for (int k = 0; k <= n - mini_batch_size_; k += mini_batch_size_) {
@@ -231,7 +231,7 @@ float Caffe2FeedForwardNetwork::Evaluate(const std::vector<Case>& testing_data) 
     if (train) gradient_ops.push_back(op); \
 }
 
-std::string Caffe2FeedForwardNetwork::AddLayers(caffe2::NetDef* net, bool train) const {
+std::string Caffe2SimpleNetwork::AddLayers(caffe2::NetDef* net, bool train) const {
     net->add_external_input(INPUTS);
     net->add_external_input(LABELS);
     if (train && expands_label_) net->add_external_input(EXPANDED_LABELS);
@@ -311,11 +311,11 @@ std::string Caffe2FeedForwardNetwork::AddLayers(caffe2::NetDef* net, bool train)
     return a;
 }
 
-float Caffe2FeedForwardNetwork::Accuracy() const {
+float Caffe2SimpleNetwork::Accuracy() const {
     return workspace_.GetBlob(ACCURACY)->Get<caffe2::TensorCPU>().data<float>()[0];
 }
 
-void Caffe2FeedForwardNetwork::AddInput(int i, const Case& c) {
+void Caffe2SimpleNetwork::AddInput(int i, const Case& c) {
     memcpy(inputs_data_ + i * input_size_, Data(c.first), input_size_ * sizeof(float));
     labels_data_[i] = c.second;
     if (expands_label_) {

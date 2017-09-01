@@ -1,5 +1,5 @@
-#ifndef DEEP_LEARNING_FEEDFORWARD_NETWORK_HPP_
-#define DEEP_LEARNING_FEEDFORWARD_NETWORK_HPP_
+#ifndef DEEP_LEARNING_SIMPLE_NETWORK_HPP_
+#define DEEP_LEARNING_SIMPLE_NETWORK_HPP_
 
 #include <inttypes.h>
 
@@ -8,11 +8,12 @@
 
 #include "common.hpp"
 
-class FeedForwardNetwork {
+// A simple neural network implementation using only full-connected neurals.
+class SimpleNetwork {
   public:
-    FeedForwardNetwork(const std::vector<Layer>& layers, float weight_decay);
+    SimpleNetwork(const std::vector<Layer>& layers, float weight_decay);
 
-    void StochasticGradientDescent(
+    void Train(
         const std::vector<Case>& training_data, size_t num_samples_per_epoch, size_t epochs,
         size_t mini_batch_size, float learning_rate, const std::vector<Case>* testing_data);
 

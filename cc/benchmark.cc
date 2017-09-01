@@ -4,8 +4,8 @@
 #include <glog/logging.h>
 
 #include "caffe2.hpp"
-#include "feedforward_network.hpp"
 #include "mnist.hpp"
+#include "simple_network.hpp"
 
 namespace {
 
@@ -29,7 +29,7 @@ void BM_MatrixRank(benchmark::State& state) {
     }
 }
 
-void BM_FeedForwardNetwork(benchmark::State& state) {
+void BM_SimpleNetwork(benchmark::State& state) {
     const int neurons = state.range(0);
     const auto training_data = LoadMNISTData(nullptr, "train");
     const size_t image_size = training_data[0].first.size();
@@ -38,12 +38,12 @@ void BM_FeedForwardNetwork(benchmark::State& state) {
         layers.emplace_back(image_size, ActivationFunc::Identity);
         layers.emplace_back(neurons, ActivationFunc::Sigmoid);
         layers.emplace_back(10, ActivationFunc::SoftMax);
-        FeedForwardNetwork network(layers, 0.9999);
-        network.StochasticGradientDescent(training_data, 1000, 10, 10, 0.5, nullptr);
+        SimpleNetwork network(layers, 0.9999);
+        network.Train(training_data, 1000, 10, 10, 0.5, nullptr);
     }
 }
 
-void BM_Caffe2FeedForwardNetwork(benchmark::State& state) {
+void BM_Caffe2SimpleNetwork(benchmark::State& state) {
     const int neurons = state.range(0);
     const auto training_data = LoadMNISTData(nullptr, "train");
     const size_t image_size = training_data[0].first.size();
@@ -52,7 +52,7 @@ void BM_Caffe2FeedForwardNetwork(benchmark::State& state) {
         layers.emplace_back(image_size, ActivationFunc::Identity);
         layers.emplace_back(neurons, ActivationFunc::Sigmoid);
         layers.emplace_back(10, ActivationFunc::SoftMax);
-        Caffe2FeedForwardNetwork network(layers, 10, 0.9999, 0.5);
+        Caffe2SimpleNetwork network(layers, 10, 0.9999, 0.5);
         network.Train(training_data, 1000, 10, nullptr);
     }
 }
@@ -63,9 +63,9 @@ BENCHMARK(BM_MatrixMul)->Unit(benchmark::kMicrosecond)->Repetitions(10)->ReportA
     ->RangeMultiplier(2)->Range(128, 2048);
 BENCHMARK(BM_MatrixRank)->Unit(benchmark::kMicrosecond)->Repetitions(10)->ReportAggregatesOnly()
     ->RangeMultiplier(2)->Range(128, 2048);
-BENCHMARK(BM_FeedForwardNetwork)->Unit(benchmark::kMillisecond)->Repetitions(10)
+BENCHMARK(BM_SimpleNetwork)->Unit(benchmark::kMillisecond)->Repetitions(10)
     ->ReportAggregatesOnly()->RangeMultiplier(2)->Range(128, 2048);
-BENCHMARK(BM_Caffe2FeedForwardNetwork)->Unit(benchmark::kMillisecond)->Repetitions(10)
+BENCHMARK(BM_Caffe2SimpleNetwork)->Unit(benchmark::kMillisecond)->Repetitions(10)
     ->ReportAggregatesOnly()->RangeMultiplier(2)->Range(128, 2048);
 
 int main(int argc, char** argv) {
@@ -127,11 +127,11 @@ int main(int argc, char** argv) {
 // BM_MatrixRank/1024            150790 us
 // BM_MatrixRank/2048           1591740 us
 //
-// BM_FeedForwardNetwork/128        420 ms
-// BM_FeedForwardNetwork/256        804 ms
-// BM_FeedForwardNetwork/512       1935 ms
-// BM_FeedForwardNetwork/1024      5415 ms
-// BM_FeedForwardNetwork/2048     18196 ms
+// BM_SimpleNetwork/128             444 ms
+// BM_SimpleNetwork/256             872 ms
+// BM_SimpleNetwork/512            1823 ms
+// BM_SimpleNetwork/1024           4220 ms
+// BM_SimpleNetwork/2048           9838 ms
 //
 // 4. Linux i5-5575R 4.8.0-58-generic Eigen-3.3.4 with MKL-2017.3.196
 // BM_MatrixMul/128                  52 us
@@ -151,3 +151,9 @@ int main(int argc, char** argv) {
 // BM_FeedForwardNetwork/512       3080 ms
 // BM_FeedForwardNetwork/1024      7874 ms
 // BM_FeedForwardNetwork/2048     18765 ms
+//
+// BM_Caffe2SimpleNetwork/128       161 ms
+// BM_Caffe2SimpleNetwork/256       312 ms
+// BM_Caffe2SimpleNetwork/512       613 ms
+// BM_Caffe2SimpleNetwork/1024     1359 ms
+// BM_Caffe2SimpleNetwork/2048     3145 ms

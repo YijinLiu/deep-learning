@@ -1,4 +1,4 @@
-#include "feedforward_network.hpp"
+#include "simple_network.hpp"
 
 #include <math.h>
 #include <stdlib.h>
@@ -9,7 +9,7 @@
 
 #include <glog/logging.h>
 
-FeedForwardNetwork::FeedForwardNetwork(const std::vector<Layer>& layers, float weight_decay)
+SimpleNetwork::SimpleNetwork(const std::vector<Layer>& layers, float weight_decay)
     : layers_(layers), weight_decay_(weight_decay) {
     // Check layers.
     CHECK_GE(layers.size(), 2);
@@ -51,7 +51,7 @@ FeedForwardNetwork::FeedForwardNetwork(const std::vector<Layer>& layers, float w
     }
 }
 
-void FeedForwardNetwork::StochasticGradientDescent(
+void SimpleNetwork::Train(
     const std::vector<Case>& training_data, size_t num_samples_per_epoch, size_t epochs,
     size_t mini_batch_size, float learning_rate, const std::vector<Case>* testing_data) {
     size_t n = std::min(training_data.size(), num_samples_per_epoch);
@@ -69,18 +69,18 @@ void FeedForwardNetwork::StochasticGradientDescent(
             corrects += UpdateMiniBatch(training_data, indices.begin() + k,
                                         indices.begin() + k + mini_batch_size, learning_rate);
         }
-        VLOG(2) << "Epoch " << e + 1 << " training accuracy: "
+        VLOG(0) << "Epoch " << e + 1 << " training accuracy: "
             << std::setprecision(4) << float(corrects) / n << "(" << corrects << "/" << n << ").";
         if (testing_data != nullptr) {
             const size_t corrects = Evaluate(*testing_data);
-            VLOG(1) << "Epoch " << e + 1 << " testing accuracy: "
+            LOG(INFO) << "Epoch " << e + 1 << " testing accuracy: "
                 << std::setprecision(4) << float(corrects) / testing_data->size()
                 << "(" << corrects << "/" << testing_data->size() << ").";
         }
     }
 }
 
-Vector FeedForwardNetwork::Activation(int layer, const Vector& z) const {
+Vector SimpleNetwork::Activation(int layer, const Vector& z) const {
     Vector ret;
     switch (layers_[layer].activation) {
         case ActivationFunc::Identity:
@@ -103,7 +103,7 @@ Vector FeedForwardNetwork::Activation(int layer, const Vector& z) const {
     return ret;
 }
 
-Vector FeedForwardNetwork::ActivationDerivative(int layer, const Vector& z) const {
+Vector SimpleNetwork::ActivationDerivative(int layer, const Vector& z) const {
     Vector ret;
     switch (layers_[layer].activation) {
         case ActivationFunc::Identity:
@@ -126,7 +126,7 @@ Vector FeedForwardNetwork::ActivationDerivative(int layer, const Vector& z) cons
     return ret;
 }
 
-Vector FeedForwardNetwork::FeedForward(const Vector& x) const {
+Vector SimpleNetwork::FeedForward(const Vector& x) const {
     Vector a = x;
     for (int i = 1; i < layers_.size(); i++) {
         a = Activation(i, weights_[i-1] * a + biases_[i-1]);
@@ -134,7 +134,7 @@ Vector FeedForwardNetwork::FeedForward(const Vector& x) const {
     return a;
 }
 
-size_t FeedForwardNetwork::Evaluate(const std::vector<Case>& testing_data) {
+size_t SimpleNetwork::Evaluate(const std::vector<Case>& testing_data) {
     size_t corrects = 0;
     for (const auto& sample : testing_data) {
         if (MaxIndex(FeedForward(sample.first)) == sample.second) corrects++;
@@ -142,10 +142,10 @@ size_t FeedForwardNetwork::Evaluate(const std::vector<Case>& testing_data) {
     return corrects;
 }
 
-int FeedForwardNetwork::UpdateMiniBatch(const std::vector<Case>& training_data,
-                                        std::vector<int>::const_iterator begin,
-                                        std::vector<int>::const_iterator end,
-                                        float learning_rate) {
+int SimpleNetwork::UpdateMiniBatch(const std::vector<Case>& training_data,
+                                   std::vector<int>::const_iterator begin,
+                                   std::vector<int>::const_iterator end,
+                                   float learning_rate) {
     // Initialize deltas as zero.
     std::vector<Vector> biases_delta(biases_.size());
     for (int i = 0; i < biases_.size(); i++) {
@@ -171,9 +171,9 @@ int FeedForwardNetwork::UpdateMiniBatch(const std::vector<Case>& training_data,
     return corrects;
 }
 
-bool FeedForwardNetwork::BackPropagate(const Vector& x, int y,
-                                       std::vector<Vector>& biases_delta,
-                                       std::vector<Matrix>& weights_delta) {
+bool SimpleNetwork::BackPropagate(const Vector& x, int y,
+                                  std::vector<Vector>& biases_delta,
+                                  std::vector<Matrix>& weights_delta) {
     const int n = layers_.size();
     std::vector<Vector> zs(n - 1);
     std::vector<Vector> as(n);

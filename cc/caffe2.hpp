@@ -5,9 +5,10 @@
 
 #include "common.hpp"
 
-class Caffe2FeedForwardNetwork {
+// A simple neural network implementation using only full-connected neurals.
+class Caffe2SimpleNetwork {
   public:
-    Caffe2FeedForwardNetwork(
+    Caffe2SimpleNetwork(
         const std::vector<Layer>& layers, int mini_batch_size, float weight_decay,
         float learning_rate);
 

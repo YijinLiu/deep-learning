@@ -3,10 +3,10 @@
 PROJECT_ROOT=$(shell readlink -f $(dir $(lastword $(MAKEFILE_LIST)))/..)
 
 train_mnist: bin/train_mnist mnist_data
-	bin/train_mnist -v=1 -logtostderr
+	bin/train_mnist -logtostderr
 
 caffe2_mnist: bin/caffe2_mnist mnist_data
-	bin/caffe2_mnist -v=-1 -logtostderr
+	bin/caffe2_mnist -logtostderr
 
 BENCHMARK_FILTER?=
 
@@ -36,11 +36,11 @@ BLAS_LD_FLAGS/MKL:=-L/usr/local/intel/mkl/lib/intel64 \
 	-Wl,--start-group -lmkl_intel_lp64 -lmkl_sequential -lmkl_core -Wl,--end-group
 BLAS_LD_FLAGS=$(BLAS_LD_FLAGS/$(BLAS))
 
-bin/train_mnist: bin/train_mnist.o bin/feedforward_network.o bin/mnist.o
+bin/train_mnist: bin/train_mnist.o bin/simple_network.o bin/mnist.o
 	mkdir -p bin
 	g++ -o $@ $^ -Wl,-Bstatic $(BLAS_LD_FLAGS) -lglog -lgflags -Wl,-Bdynamic -lpthread -ldl
 
-bin/benchmark: bin/benchmark.o bin/caffe2.o bin/feedforward_network.o bin/mnist.o
+bin/benchmark: bin/benchmark.o bin/caffe2.o bin/simple_network.o bin/mnist.o
 	mkdir -p bin
 	g++ -o $@ $^ -Wl,-Bstatic $(CAFFE2_LD_FLAGS) $(BLAS_LD_FLAGS) -lbenchmark -lglog -lgflags -Wl,-Bdynamic -lpthread -ldl
 
@@ -48,13 +48,13 @@ bin/caffe2_mnist: bin/caffe2.o bin/caffe2_mnist.o bin/mnist.o
 	mkdir -p bin
 	g++ -o $@ $^ -Wl,-Bstatic $(CAFFE2_LD_FLAGS) $(BLAS_LD_FLAGS) -lglog -lgflags -Wl,-Bdynamic -lpthread -ldl
 
-bin/feedforward_network.o: common.hpp feedforward_network.hpp linear_algebra.hpp
+bin/simple_network.o: common.hpp simple_network.hpp linear_algebra.hpp
 
 bin/mnist.o: common.hpp linear_algebra.hpp mnist.hpp
 
-bin/benchmark.o: common.hpp feedforward_network.hpp linear_algebra.hpp mnist.hpp
+bin/benchmark.o: common.hpp simple_network.hpp linear_algebra.hpp mnist.hpp
 
-bin/train_mnist.o: common.hpp feedforward_network.hpp linear_algebra.hpp mnist.hpp
+bin/train_mnist.o: common.hpp simple_network.hpp linear_algebra.hpp mnist.hpp
 
 bin/caffe2.o: caffe2.hpp common.hpp linear_algebra.hpp mnist.hpp
 
