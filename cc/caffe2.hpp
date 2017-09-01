@@ -28,14 +28,15 @@ class Caffe2SimpleNetwork {
     int input_size_;
     int output_classes_;
     // mini_batch_size_ * input_size_ items, not owned.
-    // mini_batch_size_ items, not owned.
     float* inputs_data_;
+    // mini_batch_size_ items, not owned.
     int* labels_data_;
     bool expands_label_;
+    // mini_batch_size_ * input_size_ items, not owned.
     float* expanded_labels_data_;
     caffe2::Workspace workspace_;
     std::unique_ptr<caffe2::NetBase> train_net_;
     std::unique_ptr<caffe2::NetBase> predict_net_;
 };
 
-#endif
+#endif  // DEEP_LEARNING_CAFFE2_HPP_
