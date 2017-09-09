@@ -38,8 +38,8 @@ void BM_SimpleNetwork(benchmark::State& state) {
         layers.emplace_back(image_size, ActivationFunc::Identity);
         layers.emplace_back(neurons, ActivationFunc::Sigmoid);
         layers.emplace_back(10, ActivationFunc::SoftMax);
-        SimpleNetwork network(layers, 0.9999);
-        network.Train(training_data, 1000, 10, 10, 0.5, nullptr);
+        SimpleNetwork network(layers, 10);
+        network.Train(training_data, 1000, 10, 0.9999, 0.5, nullptr);
     }
 }
 
@@ -89,11 +89,11 @@ int main(int argc, char** argv) {
 // BM_MatrixRank/1024            415310 us
 // BM_MatrixRank/2048           3452130 us
 //
-// BM_FeedForwardNetwork/128        439 ms
-// BM_FeedForwardNetwork/256        790 ms
-// BM_FeedForwardNetwork/512       2180 ms
-// BM_FeedForwardNetwork/1024     12807 ms
-// BM_FeedForwardNetwork/2048     60815 ms
+// BM_SimpleNetwork/128             439 ms
+// BM_SimpleNetwork/256             790 ms
+// BM_SimpleNetwork/512            2180 ms
+// BM_SimpleNetwork/1024          12807 ms
+// BM_SimpleNetwork/2048          60815 ms
 //
 // 2. Linux i5-5575R 4.8.0-58-generic Armadillo-7.950.1 with OpenBLAS-0.2.19
 // BM_MatrixMul/128                  70 us
@@ -108,11 +108,11 @@ int main(int argc, char** argv) {
 // BM_MatrixRank/1024            174341 us
 // BM_MatrixRank/2048           1675364 us
 //
-// BM_FeedForwardNetwork/128        506 ms
-// BM_FeedForwardNetwork/256        951 ms
-// BM_FeedForwardNetwork/512       2571 ms
-// BM_FeedForwardNetwork/1024      6881 ms
-// BM_FeedForwardNetwork/2048     24007 ms
+// BM_SimpleNetwork/128             506 ms
+// BM_SimpleNetwork/256             951 ms
+// BM_SimpleNetwork/512            2571 ms
+// BM_SimpleNetwork/1024           6881 ms
+// BM_SimpleNetwork/2048          24007 ms
 //
 // 3. Linux i5-5575R 4.8.0-58-generic Armadillo-7.950.1 with MKL-2017.3.196
 // BM_MatrixMul/128                  49 us
@@ -127,11 +127,11 @@ int main(int argc, char** argv) {
 // BM_MatrixRank/1024            150790 us
 // BM_MatrixRank/2048           1591740 us
 //
-// BM_SimpleNetwork/128             444 ms
-// BM_SimpleNetwork/256             872 ms
-// BM_SimpleNetwork/512            1823 ms
-// BM_SimpleNetwork/1024           4220 ms
-// BM_SimpleNetwork/2048           9838 ms
+// BM_SimpleNetwork/128             256 ms
+// BM_SimpleNetwork/256             471 ms
+// BM_SimpleNetwork/512             945 ms
+// BM_SimpleNetwork/1024           1933 ms
+// BM_SimpleNetwork/2048           3955 ms
 //
 // 4. Linux i5-5575R 4.8.0-58-generic Eigen-3.3.4 with MKL-2017.3.196
 // BM_MatrixMul/128                  52 us
@@ -146,11 +146,11 @@ int main(int argc, char** argv) {
 // BM_MatrixRank/1024            332819 us
 // BM_MatrixRank/2048           2795885 us
 //
-// BM_FeedForwardNetwork/128        682 ms
-// BM_FeedForwardNetwork/256       1370 ms
-// BM_FeedForwardNetwork/512       3080 ms
-// BM_FeedForwardNetwork/1024      7874 ms
-// BM_FeedForwardNetwork/2048     18765 ms
+// BM_SimpleNetwork/128             207 ms
+// BM_SimpleNetwork/256             374 ms
+// BM_SimpleNetwork/512             767 ms
+// BM_SimpleNetwork/1024           1675 ms
+// BM_SimpleNetwork/2048           3582 ms
 //
 // BM_Caffe2SimpleNetwork/128       161 ms
 // BM_Caffe2SimpleNetwork/256       312 ms

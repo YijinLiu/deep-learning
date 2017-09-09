@@ -11,34 +11,37 @@
 // A simple neural network implementation using only full-connected neurals.
 class SimpleNetwork {
   public:
-    SimpleNetwork(const std::vector<Layer>& layers, float weight_decay);
+    SimpleNetwork(const std::vector<Layer>& layers, size_t mini_batch_size);
 
     void Train(
         const std::vector<Case>& training_data, size_t num_samples_per_epoch, size_t epochs,
-        size_t mini_batch_size, float learning_rate, const std::vector<Case>* testing_data);
+        float weight_decay, float learning_rate, const std::vector<Case>* testing_data);
 
     size_t Evaluate(const std::vector<Case>& testing_data);
 
   private:
+    inline Matrix Z(int layer, const Matrix& z) const;
+    inline Matrix Activation(int layer, const Matrix& z) const;
+    inline Matrix ActivationDerivative(int layer, const Matrix& z) const;
+
+    inline Matrix FeedForward(const Matrix& inputs) const;
+
     // Returns number of correct predicts.
-    int UpdateMiniBatch(
-        const std::vector<Case>& training_data,
-        std::vector<int>::const_iterator begin, std::vector<int>::const_iterator end,
-        float learning_rate);
+    inline int BackPropagate(const Matrix& inputs, const std::vector<int>& labels,
+                             std::vector<Matrix>& weights_delta,
+                             std::vector<Vector>& biases_delta) const;
 
-    Vector Activation(int layer, const Vector& z) const;
-    Vector ActivationDerivative(int layer, const Vector& z) const;
-
-    Vector FeedForward(const Vector& x) const;
-
-    // Returns whether it's a correct predict.
-    bool BackPropagate(const Vector& x, int y,
-                       std::vector<Vector>& biases_delta, std::vector<Matrix>& weights_delta);
+    // Returns number of correct predicts.
+    inline int UpdateMiniBatch(
+        const std::vector<Case>& training_data, const std::vector<int> indices, int start, 
+        float weight_decay, float learning_rate);
 
     const std::vector<Layer> layers_;
-    const float weight_decay_;
-    std::vector<Vector> biases_;
+    const size_t mini_batch_size_;
+    int input_size_;
+    int output_classes_;
     std::vector<Matrix> weights_;
+    std::vector<Vector> biases_;
 };
 
 #endif  // DEEP_LEARNING_FEEDFORWARD_NETWORK_HPP_

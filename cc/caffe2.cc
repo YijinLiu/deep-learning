@@ -316,7 +316,7 @@ float Caffe2SimpleNetwork::Accuracy() const {
 }
 
 void Caffe2SimpleNetwork::AddInput(int i, const Case& c) {
-    memcpy(inputs_data_ + i * input_size_, Data(c.first), input_size_ * sizeof(float));
+    memcpy(inputs_data_ + i * input_size_, MAT_DATA(c.first), input_size_ * sizeof(float));
     labels_data_[i] = c.second;
     if (expands_label_) {
         for (int k = 0; k < output_classes_; k++) {

@@ -82,7 +82,7 @@ std::vector<Case> LoadMNISTData(const char* cstr_dir, const char* cstr_name) {
         CHECK_EQ(bytes, image_size) << "Failed to read image #" << i;
         Vector& image = results[i].first;
         image.resize(image_size);
-        for (int j = 0; j < image_size; j++) image[j] = image_data[j] / 256.f;
+        for (int j = 0; j < image_size; j++) image(j) = image_data[j] / 256.f;
         uint8_t label;
         bytes = fread(&label, 1, 1, labels_fh);
         CHECK_EQ(bytes, 1) << "Failed to read label #" << i;

@@ -18,7 +18,7 @@ BLAS_CXX_FLAGS/ATLAS:=-DEIGEN_USE_BLAS -DEIGEN_USE_LAPACKE
 BLAS_CXX_FLAGS/OpenBLAS:=-DEIGEN_USE_BLAS -DEIGEN_USE_LAPACKE
 BLAS_CXX_FLAGS/MKL:=-DEIGEN_USE_MKL_ALL -I/usr/local/intel/mkl/include
 
-LALIB?=Armadillo
+LALIB?=Eigen
 LA_CXX_FLAGS/Eigen:=-I/usr/local/include/eigen3 -DUSE_EIGEN
 LA_CXX_FLAGS/Armadillo:=-DUSE_ARMADILLO
 
@@ -27,13 +27,14 @@ CAFFE2_CXX_FLAGS:=$(CAFFE2_CXX_FLAGS/$(BLAS)) -I/usr/local/include/eigen3
 
 CAFFE2_LD_FLAGS:=-Wl,--whole-archive -lCaffe2_CPU -Wl,--no-whole-archive -lprotobuf
 
-CXX_FLAGS:=-std=gnu++11 -D_POSIX_C_SOURCE=200809L $(CAFFE2_CXX_FLAGS) $(BLAS_CXX_FLAGS/$(BLAS)) $(LA_CXX_FLAGS/$(LALIB))
+CXX_FLAGS:=-std=gnu++11 -D_POSIX_C_SOURCE=200809L -mavx2 \
+    $(CAFFE2_CXX_FLAGS) $(BLAS_CXX_FLAGS/$(BLAS)) $(LA_CXX_FLAGS/$(LALIB))
 
 BLAS_LD_FLAGS/ATLAS:=-L/usr/local/ATLAS/lib -llapack -lcblas -lf77blas -latlas -lgfortran -lquadmath
 BLAS_LD_FLAGS/OpenBLAS:=-L/usr/local/OpenBLAS/lib -lopenblas -lgfortran -lquadmath
 # See https://software.intel.com/en-us/articles/intel-mkl-link-line-advisor/
 BLAS_LD_FLAGS/MKL:=-L/usr/local/intel/mkl/lib/intel64 \
-	-Wl,--start-group -lmkl_intel_lp64 -lmkl_sequential -lmkl_core -Wl,--end-group
+    -Wl,--start-group -lmkl_intel_lp64 -lmkl_sequential -lmkl_core -Wl,--end-group
 BLAS_LD_FLAGS=$(BLAS_LD_FLAGS/$(BLAS))
 
 bin/train_mnist: bin/train_mnist.o bin/simple_network.o bin/mnist.o
@@ -66,7 +67,7 @@ bin/%.o: %.cc
 
 mnist_files:=$(PROJECT_ROOT)/mnist_data/train-images-idx3-ubyte \
              $(PROJECT_ROOT)/mnist_data/train-labels-idx1-ubyte \
-			 $(PROJECT_ROOT)/mnist_data/t10k-images-idx3-ubyte \
+             $(PROJECT_ROOT)/mnist_data/t10k-images-idx3-ubyte \
              $(PROJECT_ROOT)/mnist_data/t10k-labels-idx1-ubyte
 
 mnist_data: $(mnist_files)

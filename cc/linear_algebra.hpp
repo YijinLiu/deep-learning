@@ -6,22 +6,20 @@
 #ifdef USE_EIGEN
 
 #include <Eigen/Dense>
-#define Vector Eigen::VectorXf
+#define Vector Eigen::RowVectorXf
 #define Matrix Eigen::MatrixXf
 
-inline int Size(const Eigen::VectorXf& vec) { return vec.size(); }
+#define MAT_SIZE(mat) mat.size()
+#define MAT_ROWS(mat) mat.rows()
+#define MAT_COLS(mat) mat.cols()
+#define MAT_DATA(mat) mat.data()
+#define MAX_VAL(mat) mat.maxCoeff()
+#define MAX_VAL_INDEX(mat, val) mat.maxCoeff(&val)
+#define MAT_T(mat) mat.transpose()
+#define MAT_CWISE_MUL(m1, m2) m1 = m1.cwiseProduct(m2);
+#define MAT_COL_SUM(mat) mat.colwise().sum()
 
-inline const float* Data(Eigen::VectorXf& vec) { return vec.data(); }
-
-inline float Max(const Eigen::VectorXf& vec) { return vec.maxCoeff(); }
-
-inline int MaxIndex(const Eigen::VectorXf& vec) {
-    int index;
-    vec.maxCoeff(&index);
-    return index;
-}
-
-inline void Zeros(Eigen::VectorXf& vec, const Eigen::VectorXf& tpl) {
+inline void Zeros(Eigen::RowVectorXf& vec, const Eigen::RowVectorXf& tpl) {
     vec.resize(tpl.size());
     vec.fill(0.f);
 }
@@ -31,7 +29,7 @@ inline void Zeros(Eigen::MatrixXf& mat, const Eigen::MatrixXf& tpl) {
     mat.fill(0.f);
 }
 
-inline void Ones(Eigen::VectorXf& vec, const Eigen::VectorXf& tpl) {
+inline void Ones(Eigen::RowVectorXf& vec, const Eigen::RowVectorXf& tpl) {
     vec.resize(tpl.size());
     vec.fill(1.f);
 }
@@ -41,7 +39,7 @@ inline void Ones(Eigen::MatrixXf& mat, const Eigen::MatrixXf& tpl) {
     mat.fill(1.f);
 }
 
-inline void Randomize(Eigen::VectorXf& vec, int size) {
+inline void Randomize(Eigen::RowVectorXf& vec, int size) {
     vec.resize(size);
     vec.setRandom();
 }
@@ -51,15 +49,7 @@ inline void Randomize(Eigen::MatrixXf& mat, int rows, int cols) {
     mat.setRandom();
 }
 
-inline void ElemWiseMul(Eigen::VectorXf& v1, const Eigen::VectorXf& v2) {
-    v1 = v1.cwiseProduct(v2);
-}
-
-inline Eigen::MatrixXf Transpose(const Eigen::MatrixXf& mat) {
-    return mat.transpose();
-}
-
-inline void ApplyOnLeft(Eigen::VectorXf& vec, const Eigen::MatrixXf& other) {
+inline void ApplyOnLeft(Eigen::RowVectorXf& vec, const Eigen::MatrixXf& other) {
     vec.applyOnTheLeft(other);
 }
 
@@ -68,36 +58,27 @@ inline int Rank(const Eigen::MatrixXf& mat) {
     return lu_decomp.rank();
 }
 
-inline Eigen::VectorXf Sigmoid(const Eigen::VectorXf& z) {
-    Eigen::VectorXf s(z.size());
-    for (int i = 0; i < z.size(); i++) s(i) = 1.f / (1.f + expf(-z(i)));
-    return s;
-}
-
-inline Eigen::VectorXf SigmoidDerivative(const Eigen::VectorXf& z) {
-    const Eigen::VectorXf s = Sigmoid(z);
-    return s.cwiseProduct(Eigen::VectorXf::Constant(z.size(), 1.f) - s);
-}
-
-inline Eigen::VectorXf ReLU(const Eigen::VectorXf& z) {
+inline Eigen::RowVectorXf ReLU(const Eigen::RowVectorXf& z) {
     return z.cwiseMax(0.f);
 }
 
 #elif defined(USE_ARMADILLO)
 
 #include <armadillo>
-#define Vector arma::Col<float>
+#define Vector arma::Row<float>
 #define Matrix arma::Mat<float>
 
-inline int Size(const arma::Col<float>& vec) { return vec.n_elem; }
+#define MAT_SIZE(mat) mat.n_elem
+#define MAT_ROWS(mat) mat.n_rows
+#define MAT_COLS(mat) mat.n_cols
+#define MAT_DATA(mat) mat.memptr()
+#define MAX_VAL(mat) mat.max()
+#define MAX_VAL_INDEX(mat, val) val = mat.index_max()
+#define MAT_T(mat) mat.t()
+#define MAT_CWISE_MUL(m1, m2) m1 %= m2
+#define MAT_COL_SUM(mat) arma::sum(mat, 0);
 
-inline const float* Data(const arma::Col<float>& vec) { return vec.memptr(); }
-
-inline float Max(const arma::Col<float>& vec) { return vec.max(); }
-
-inline int MaxIndex(const arma::Col<float>& vec) { return vec.index_max(); }
-
-inline void Zeros(arma::Col<float>& vec, const arma::Col<float>& tpl) {
+inline void Zeros(arma::Row<float>& vec, const arma::Row<float>& tpl) {
     vec.zeros(tpl.n_elem);
 }
 
@@ -105,7 +86,7 @@ inline void Zeros(arma::Mat<float>& mat, const arma::Mat<float>& tpl) {
     mat.zeros(tpl.n_rows, tpl.n_cols);
 }
 
-inline void Ones(arma::Col<float>& vec, const arma::Col<float>& tpl) {
+inline void Ones(arma::Row<float>& vec, const arma::Row<float>& tpl) {
     vec.ones(tpl.n_elem);
 }
 
@@ -121,15 +102,7 @@ inline void Randomize(arma::Mat<float>& mat, int rows, int cols) {
     mat.randu(rows, cols);
 }
 
-inline void ElemWiseMul(arma::Col<float>& v1, const arma::Col<float>& v2) {
-    v1 %= v2;
-}
-
-inline arma::Mat<float> Transpose(const arma::Mat<float>& mat) {
-    return mat.t();
-}
-
-inline void ApplyOnLeft(arma::Col<float>& vec, const arma::Mat<float>& other) {
+inline void ApplyOnLeft(arma::Row<float>& vec, const arma::Mat<float>& other) {
     vec = other * vec;
 }
 
@@ -137,20 +110,9 @@ inline int Rank(const arma::Mat<float>& mat) {
     return arma::rank(mat);
 }
 
-inline arma::Col<float> Sigmoid(const arma::Col<float>& z) {
-    arma::Col<float> s(z.n_elem);
-    for (int i = 0; i < z.n_elem; i++) s(i) = 1.f / (1.f + expf(-z[i]));
-    return s;
-}
-
-inline arma::Col<float> SigmoidDerivative(const arma::Col<float>& z) {
-    const arma::Col<float> s = Sigmoid(z);
-    return s % (arma::ones<arma::Col<float>>(z.n_elem) - s);
-}
-
-inline arma::Col<float> ReLU(const arma::Col<float>& z) {
-    arma::Col<float> a(z.n_elem);
-    for (int i = 0; i < z.n_elem; i++) a(i) = std::max(z[i], 0.f);
+inline arma::Mat<float> ReLU(const arma::Mat<float>& z) {
+    arma::Mat<float> a(z.n_rows, z.n_cols);
+    for (int i = 0; i < z.n_elem; i++) a(i) = std::max(z(i), 0.f);
     return a;
 }
 
@@ -161,28 +123,39 @@ inline arma::Col<float> ReLU(const arma::Col<float>& z) {
 #endif
 
 inline Vector ReLUDerivative(const Vector& z) {
-    Vector d = Sigmoid(z);
-    for (int i = 0; i < Size(z); i++) {
-        if (z(i) < 0) {
-            d(i) = 0.f;
-        } else {
-            d(i) = 1.f;
-        }
-    }
+    Matrix d(MAT_ROWS(z), MAT_COLS(z));
+    for (int i = 0; i < MAT_SIZE(z); i++) d(i) = z(i) < 0 ? 0.f : 1.f;
     return d;
 }
 
-inline Vector SoftMax(const Vector& z) {
-    const int n = Size(z);
-    Vector a(n);
-    const float max = Max(z);
-    float sum = 0.f;
-    for (int i = 0; i < n; i++) {
-        const float e = expf(z(i) - max);
-        a(i) = e;
-        sum += e;
+inline Matrix Sigmoid(const Matrix& z) {
+    Matrix a(MAT_ROWS(z), MAT_COLS(z));
+    for (int i = 0; i < MAT_SIZE(z); i++) a(i) = 1.f / (1.f + expf(-z(i)));
+    return a;
+}
+
+inline Matrix SigmoidDerivative(const Matrix& z) {
+    const Matrix s = Sigmoid(z);
+    Matrix t;
+    Ones(t, z);
+    t -= s;
+    return MAT_CWISE_MUL(t, s);
+}
+
+inline Matrix SoftMax(const Matrix& z) {
+    Matrix a(MAT_ROWS(z), MAT_COLS(z));
+    for (int i = 0; i < MAT_ROWS(z); i++) {
+        const auto& z_row = z.row(i);
+        const float z_max = MAX_VAL(z_row);
+        auto row = a.row(i);
+        float sum = 0.f;
+        for (int j = 0; j < MAT_COLS(z); j++) {
+            const float e = expf(z_row(j) - z_max);
+            row(j) = e;
+            sum += e;
+        }
+        row /= sum;
     }
-    a /= sum;
     return a;
 }
 
