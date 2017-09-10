@@ -24,23 +24,6 @@
 
 namespace {
 
-std::string Sprintf(const char* fmt, ...) {
-    char buf[100];
-    va_list ap;
-    va_start(ap, fmt);
-    vsnprintf(buf, sizeof(buf), fmt, ap);
-    va_end(ap);
-    return buf;
-}
-
-std::string LayerW(int l) { return Sprintf("l%d_w", l); }
-
-std::string LayerB(int l) { return Sprintf("l%d_b", l); }
-
-std::string LayerZ(int l) { return Sprintf("l%d_z", l); }
-
-std::string LayerA(int l) { return Sprintf("l%d_a", l); }
-
 caffe2::Argument* AddOpArg(caffe2::OperatorDef* op, const std::string& name) {
     auto* arg = op->add_arg();
     arg->set_name(name);

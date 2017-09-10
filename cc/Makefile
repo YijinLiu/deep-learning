@@ -1,4 +1,4 @@
-.PHONY: train_mnist caffe2_mnist benchmark mnist_data clean
+.PHONY: train_mnist caffe2_mnist tf_mnist benchmark mnist_data clean
 
 PROJECT_ROOT=$(shell readlink -f $(dir $(lastword $(MAKEFILE_LIST)))/..)
 
@@ -7,6 +7,9 @@ train_mnist: bin/train_mnist mnist_data
 
 caffe2_mnist: bin/caffe2_mnist mnist_data
 	bin/caffe2_mnist -logtostderr
+
+tf_mnist: bin/tf_mnist mnist_data
+	bin/tf_mnist -logtostderr
 
 BENCHMARK_FILTER?=
 
@@ -27,6 +30,8 @@ CAFFE2_CXX_FLAGS:=$(CAFFE2_CXX_FLAGS/$(BLAS)) -I/usr/local/include/eigen3
 
 CAFFE2_LD_FLAGS:=-Wl,--whole-archive -lCaffe2_CPU -Wl,--no-whole-archive -lprotobuf
 
+TF_LD_FLAGS:=-ltensorflow_cc
+
 CXX_FLAGS:=-std=gnu++11 -D_POSIX_C_SOURCE=200809L -mavx2 \
     $(CAFFE2_CXX_FLAGS) $(BLAS_CXX_FLAGS/$(BLAS)) $(LA_CXX_FLAGS/$(LALIB))
 
@@ -41,13 +46,17 @@ bin/train_mnist: bin/train_mnist.o bin/simple_network.o bin/mnist.o
 	mkdir -p bin
 	g++ -o $@ $^ -Wl,-Bstatic $(BLAS_LD_FLAGS) -lglog -lgflags -Wl,-Bdynamic -lpthread -ldl
 
-bin/benchmark: bin/benchmark.o bin/caffe2.o bin/simple_network.o bin/mnist.o
-	mkdir -p bin
-	g++ -o $@ $^ -Wl,-Bstatic $(CAFFE2_LD_FLAGS) $(BLAS_LD_FLAGS) -lbenchmark -lglog -lgflags -Wl,-Bdynamic -lpthread -ldl
-
 bin/caffe2_mnist: bin/caffe2.o bin/caffe2_mnist.o bin/mnist.o
 	mkdir -p bin
 	g++ -o $@ $^ -Wl,-Bstatic $(CAFFE2_LD_FLAGS) $(BLAS_LD_FLAGS) -lglog -lgflags -Wl,-Bdynamic -lpthread -ldl
+
+bin/tf_mnist: bin/tf_mnist.o bin/tensorflow.o bin/mnist.o
+	mkdir -p bin
+	g++ -o $@ $^ -Wl,-Bstatic $(BLAS_LD_FLAGS) -lglog -lgflags -Wl,-Bdynamic $(TF_LD_FLAGS) -lpthread -ldl
+
+bin/benchmark: bin/benchmark.o bin/caffe2.o bin/simple_network.o bin/mnist.o
+	mkdir -p bin
+	g++ -o $@ $^ -Wl,-Bstatic $(CAFFE2_LD_FLAGS) $(BLAS_LD_FLAGS) -lbenchmark -lglog -lgflags -Wl,-Bdynamic -lpthread -ldl
 
 bin/simple_network.o: common.hpp simple_network.hpp linear_algebra.hpp
 
@@ -57,9 +66,13 @@ bin/benchmark.o: common.hpp simple_network.hpp linear_algebra.hpp mnist.hpp
 
 bin/train_mnist.o: common.hpp simple_network.hpp linear_algebra.hpp mnist.hpp
 
-bin/caffe2.o: caffe2.hpp common.hpp linear_algebra.hpp mnist.hpp
+bin/caffe2.o: caffe2.hpp common.hpp linear_algebra.hpp
 
 bin/caffe2_mnist.o: caffe2.hpp common.hpp linear_algebra.hpp mnist.hpp
+
+bin/tensorflow.o: tensorflow.hpp common.hpp linear_algebra.hpp
+
+bin/tf_mnist.o: tensorflow.hpp common.hpp linear_algebra.hpp mnist.hpp
 
 bin/%.o: %.cc
 	mkdir -p bin
